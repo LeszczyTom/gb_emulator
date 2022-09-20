@@ -42,11 +42,16 @@ impl LR35902 {
     pub fn get_l(&self) -> u8 { self.l }
     pub fn get_f(&self) -> u8 { self.f }
     pub fn get_sp(&self) -> u16 { self.sp }
+    pub fn get_z_flag(&self) -> bool { self.f & 0b10000000 != 0 }
+    pub fn get_n_flag(&self) -> bool { self.f & 0b01000000 != 0 }
+    pub fn get_h_flag(&self) -> bool { self.f & 0b00100000 != 0 }
+    pub fn get_c_flag(&self) -> bool { self.f & 0b00010000 != 0 }
     pub fn get_pc(&mut self) -> u16 {
         self.pc += 1;
         self.pc - 1
     }
 
+    pub fn set_pc(&mut self, pc: u16) { self.pc = pc }
     pub fn set_af(&mut self, value: u16) {
         let bytes = value.to_be_bytes();
         self.a = bytes[0];
@@ -249,7 +254,28 @@ impl LR35902 {
             self.flag_carry(furthest_right_bit);
             self.set_a(self.get_a().rotate_right(1));
         }
-        return 4;
+        self.flag_zero(false);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        
+        4
+    }
+
+    /**
+     * rotation -> false left / true right
+     * TODO half carry 
+    */ 
+    pub fn rotate_a(&mut self, rotation: bool) -> u8{
+        if rotation {
+            self.set_a(self.get_a().rotate_left(1));
+        } else {
+            self.set_a(self.get_a().rotate_right(1));
+        }
+        self.flag_zero(false);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        
+        4
     }
 
     // todo overflow? half carry?
@@ -263,7 +289,55 @@ impl LR35902 {
         };
         self.set_hl(self.get_hl() +  to_add);
         self.flag_substract(false);
-        return 8
+        
+        8
+    }
+
+    pub fn relative_jump(&mut self, value: u8) -> u8 {
+        self.pc += value as u16;
+        12
+    }
+
+    pub fn conditional_relative_jump(&mut self, condition: &str, value: u8) -> u8 {
+        let jump = match condition {
+            "z" => self.get_z_flag(),
+            "nz" => !self.get_z_flag(),
+            "c" => self.get_c_flag(),
+            "nc" => !self.get_c_flag(),
+            _ => panic!("Invalid condition"),
+        };
+        if jump {
+            self.relative_jump(value);
+            12
+        } else {
+            8
+        }
+    }
+
+    // TODO ??
+    pub fn daa(&self) -> u8 {
+        4
+    }
+
+    pub fn cpl(&mut self) -> u8 {
+        self.set_a(self.get_a() ^ 0xFF);
+        self.flag_substract(true);
+        self.flag_half_carry(true);
+        4
+    }
+
+    pub fn scf(&mut self) -> u8 {
+        self.flag_carry(true);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        4
+    }
+
+    pub fn ccf(&mut self) -> u8 {
+        self.flag_carry(!self.get_c_flag());
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        4
     }
 }
 
