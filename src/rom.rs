@@ -30,6 +30,14 @@ impl ROM {
         }
     }
 
+    pub fn fetch_rom_bank(&self) -> [u8; 0x8000] {
+        let mut rom_bank = [0; 0x8000];
+        for i in 0..0x8000 {
+            rom_bank[i] = self.data[i];
+        }
+        rom_bank
+    }
+
     fn header_checksum(&self) -> bool {
         let mut sum: i16 = 0;
         for i in 0x134..0x14D {

@@ -36,9 +36,15 @@ impl MEMORY {
         self.data[address as usize] = value;
     }
 
-    pub fn dump_hex(&self) {
+    pub fn load_rom(&mut self, rom: [u8; 0x8000]) {
+        for (i, byte) in rom.iter().enumerate() {
+            self.data[i] = *byte;
+        }
+    }
+
+    fn dump_hex(&self, start: usize, end: usize) {
         let mut cpt = 0;
-        for i in 0..MEM_SIZE {
+        for i in start..end {
             if cpt == 0 {
                 print!("|\n{:04X}: | ", i);
                 cpt = 16;
@@ -46,5 +52,50 @@ impl MEMORY {
             print!("{:02X} ", self.data[i]); 
             cpt -= 1;
         }
+        println!("|");
+    }
+
+    pub fn dump_rom_bank_0(&self) {
+        self.dump_hex(0x0000, 0x4000);
+    }
+
+    pub fn dump_rom_bank_1(&self) {
+        self.dump_hex(0x4000, 0x8000);
+    }
+
+    pub fn dump_vram(&self) {
+        self.dump_hex(0x8000, 0xA000);
+    }
+
+    pub fn dump_ext_ram(&self) {
+        self.dump_hex(0xA000, 0xC000);
+    }
+
+    pub fn dump_wram_0(&self) {
+        self.dump_hex(0xC000, 0xD000);
+    }
+
+    pub fn dump_wram_1(&self) {
+        self.dump_hex(0xD000, 0xE000);
+    }
+
+    pub fn dump_echo(&self) {
+        self.dump_hex(0xE000, 0xFE00);
+    }
+
+    pub fn dump_oam(&self) {
+        self.dump_hex(0xFE00, 0xFEA0);
+    }
+
+    pub fn dump_io_ports(&self) {
+        self.dump_hex(0xFF00, 0xFF80);
+    }
+
+    pub fn dump_hram(&self) {
+        self.dump_hex(0xFF80, 0xFFFF);
+    }
+
+    pub fn dump_int_enable_reg(&self) {
+        self.dump_hex(0xFFFF, 0x10000);
     }
 }
