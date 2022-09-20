@@ -41,7 +41,6 @@ impl LR35902 {
     pub fn get_h(&self) -> u8 { self.h }
     pub fn get_l(&self) -> u8 { self.l }
     pub fn get_f(&self) -> u8 { self.f }
-    pub fn get_sp(&self) -> u16 { self.sp }
     pub fn get_z_flag(&self) -> bool { self.f & 0b10000000 != 0 }
     pub fn get_n_flag(&self) -> bool { self.f & 0b01000000 != 0 }
     pub fn get_h_flag(&self) -> bool { self.f & 0b00100000 != 0 }
@@ -50,8 +49,12 @@ impl LR35902 {
         self.pc += 1;
         self.pc - 1
     }
+    pub fn get_sp(&mut self) -> u16 {
+        self.sp
+    }
 
     pub fn set_pc(&mut self, pc: u16) { self.pc = pc }
+    pub fn set_sp(&mut self, sp: u16) { self.sp = sp }
     pub fn set_af(&mut self, value: u16) {
         let bytes = value.to_be_bytes();
         self.a = bytes[0];
@@ -74,10 +77,6 @@ impl LR35902 {
         let bytes = value.to_be_bytes();
         self.h = bytes[0];
         self.l = bytes[1];
-    }
-    
-    pub fn set_sp(&mut self, value: u16) {
-        self.sp = value;
     }
 
     pub fn set_a(&mut self, value: u8) {
@@ -192,9 +191,7 @@ impl LR35902 {
             "hl" => {
                 self.set_hl(self.get_hl() + 1);
             },
-            "sp" => {
-                self.set_sp(self.get_sp() + 1);
-            },
+            "sp" => self.sp += 1,
             _ => panic!("Invalid register"),
         }
     }
@@ -236,9 +233,7 @@ impl LR35902 {
             "hl" => {
                 self.set_hl(self.get_hl() - 1);
             },
-            "sp" => {
-                self.set_sp(self.get_sp() - 1);
-            },
+            "sp" => self.sp -= 1,
             _ => panic!("Invalid register"),
         }
     }
@@ -284,7 +279,7 @@ impl LR35902 {
             "bc" => self.get_bc(),
             "de" => self.get_de(),
             "hl" => self.get_hl(),
-            "sp" => self.get_sp(),
+            "sp" => self.sp,
             _ => panic!("Invalid register"),
         };
         self.set_hl(self.get_hl() +  to_add);
@@ -338,6 +333,81 @@ impl LR35902 {
         self.flag_substract(false);
         self.flag_half_carry(false);
         4
+    }
+
+    // TODO ???
+    pub fn halt(&mut self) -> u8 {
+        4
+    }
+
+    // TODO overflow? half carry?
+    pub fn add(&mut self, value: u8) {
+        let result = self.get_a() + value;
+        self.set_a(result);
+        self.flag_zero(result == 0);
+        self.flag_half_carry((self.get_a() & 0xF) + (value & 0xF) > 0xF);
+        self.flag_substract(false);
+    }
+
+    pub fn adc(&mut self, value: u8) {
+        let carry = if self.get_c_flag() { 1 } else { 0 };
+        let result = self.get_a() + value + carry;
+        self.set_a(result);
+        self.flag_zero(result == 0);
+        self.flag_half_carry((self.get_a() & 0xF) + (value & 0xF) + carry > 0xF);
+        self.flag_substract(false);
+    }
+
+    pub fn sub(&mut self, value: u8) {
+        let result = self.get_a() - value;
+        self.set_a(result);
+        self.flag_zero(result == 0);
+        self.flag_half_carry((self.get_a() & 0xF) < (value & 0xF));
+        self.flag_substract(true);
+    }
+
+    pub fn sbc(&mut self, value: u8) {
+        let carry = if self.get_c_flag() { 1 } else { 0 };
+        let result = self.get_a() - value - carry;
+        self.set_a(result);
+        self.flag_zero(result == 0);
+        self.flag_half_carry((self.get_a() & 0xF) < (value & 0xF) + carry);
+        self.flag_substract(true);
+    }
+
+    pub fn and(&mut self, value: u8) {
+        let result = self.a & value;
+        self.flag_zero(result == 0);
+        self.flag_substract(false);
+        self.flag_half_carry(true);
+        self.flag_carry(false);
+        self.a = result;
+    }
+
+    pub fn xor(&mut self, value: u8) {
+        let result = self.a ^ value;
+        self.flag_zero(result == 0);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        self.flag_carry(false);
+        self.a = result;
+    }
+
+    pub fn or(&mut self, value: u8) {
+        let result = self.a | value;
+        self.flag_zero(result == 0);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        self.flag_carry(false);
+        self.a = result;
+    }
+
+    // TODO carry?
+    pub fn cp(&mut self, value: u8) {
+        let result = self.get_a() - value;
+        self.flag_zero(result == 0);
+        self.flag_substract(true);
+        self.flag_half_carry((self.get_a() & 0xF) < (value & 0xF));
     }
 }
 
