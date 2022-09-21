@@ -15,16 +15,16 @@ pub struct LR35902 {
 impl LR35902 {
     pub fn new() -> LR35902 {
         LR35902 {
-            a: 0,
-            b: 0,
-            c: 0,
-            d: 0,
-            e: 0,
-            h: 0,
-            l: 0,
-            f: 0,
+            a: 0x01,
+            b: 0x00,
+            c: 0x13,
+            d: 0x00,
+            e: 0xD8,
+            h: 0x01,
+            l: 0x4D,
+            f: 0xB0,
             pc: 0x0100, // Starting at cartridge first instruction bc no bios
-            sp: 0,
+            sp: 0xFFFE,
         }
     }
 
@@ -182,6 +182,16 @@ impl LR35902 {
                 self.flag_zero(self.e == 0);
                 self.flag_substract(false);
             },
+            "h" => {
+                self.h += 1;
+                self.flag_zero(self.h == 0);
+                self.flag_substract(false);
+            },
+            "l" => {
+                self.l += 1;
+                self.flag_zero(self.l == 0);
+                self.flag_substract(false);
+            },
             "bc" => {
                 self.set_bc(self.get_bc() + 1);
             },
@@ -192,7 +202,7 @@ impl LR35902 {
                 self.set_hl(self.get_hl() + 1);
             },
             "sp" => self.sp += 1,
-            _ => panic!("Invalid register"),
+            _ => panic!("Invalid register: {}", register),
         }
     }
 
@@ -222,6 +232,16 @@ impl LR35902 {
             "e" => {
                 self.e -= 1;
                 self.flag_zero(self.e == 0);
+                self.flag_substract(true);
+            },
+            "h" => {
+                self.h -= 1;
+                self.flag_zero(self.h == 0);
+                self.flag_substract(true);
+            },
+            "l" => {
+                self.l -= 1;
+                self.flag_zero(self.l == 0);
                 self.flag_substract(true);
             },
             "bc" => {
@@ -340,6 +360,16 @@ impl LR35902 {
         4
     }
 
+    // TODO carr/ hcarry
+    pub fn add_sp(&mut self, value: u8) -> u8 {
+        self.sp += value as u16;
+        self.flag_zero(false);
+        self.flag_substract(false);
+        //self.flag_half_carry(false);
+        //self.flag_carry(false);
+        16
+    }
+
     // TODO overflow? half carry?
     pub fn add(&mut self, value: u8) {
         let result = self.get_a() + value;
@@ -408,6 +438,84 @@ impl LR35902 {
         self.flag_zero(result == 0);
         self.flag_substract(true);
         self.flag_half_carry((self.get_a() & 0xF) < (value & 0xF));
+    }
+
+    pub fn rst(&mut self, value: u8) -> u8 {
+        self.pc = value as u16;
+        16
+    }
+
+    // TODO carry?
+    pub fn rlc(&mut self, registre: &str) {
+        let value = match registre {
+            "a" => self.get_a(),
+            "b" => self.get_b(),
+            "c" => self.get_c(),
+            "d" => self.get_d(),
+            "e" => self.get_e(),
+            "h" => self.get_h(),
+            "l" => self.get_l(),
+            _ => panic!("Invalid register"),
+        };
+        let result = value.rotate_left(1);
+        self.flag_zero(result == 0);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        match registre {
+            "a" => self.set_a(result),
+            "b" => self.set_b(result),
+            "c" => self.set_c(result),
+            "d" => self.set_d(result),
+            "e" => self.set_e(result),
+            "h" => self.set_h(result),
+            "l" => self.set_l(result),
+            _ => panic!("Invalid register"),
+        };
+    }
+    
+    pub fn rrc(&mut self, registre: &str) {
+        let value = match registre {
+            "a" => self.get_a(),
+            "b" => self.get_b(),
+            "c" => self.get_c(),
+            "d" => self.get_d(),
+            "e" => self.get_e(),
+            "h" => self.get_h(),
+            "l" => self.get_l(),
+            _ => panic!("Invalid register"),
+        };
+        let result = value.rotate_right(1);
+        self.flag_zero(result == 0);
+        self.flag_substract(false);
+        self.flag_half_carry(false);
+        match registre {
+            "a" => self.set_a(result),
+            "b" => self.set_b(result),
+            "c" => self.set_c(result),
+            "d" => self.set_d(result),
+            "e" => self.set_e(result),
+            "h" => self.set_h(result),
+            "l" => self.set_l(result),
+            _ => panic!("Invalid register"),
+        };
+    }
+
+    pub fn rl(&mut self, registre: &str) {
+        let value = match registre {
+            "a" => self.get_a(),
+            "b" => self.get_b(),
+            "c" => self.get_c(),
+            "d" => self.get_d(),
+            "e" => self.get_e(),
+            "h" => self.get_h(),
+            "l" => self.get_l(),
+            _ => panic!("Invalid register"),
+        };
+        let carry = if self.get_c_flag() { 1 } else { 0 };
+        let result = value.rotate_left(1);
+        self.flag_zero(result == 0);
+        self.flag_carry(value & 0b0000_0001 == 0b0000_0001);
+
     }
 }
 

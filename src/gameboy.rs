@@ -4,7 +4,7 @@ use super::cpu::LR35902;
 
 pub struct GAMEBOY {
     cpu: LR35902,
-    memory: MEMORY,
+    pub memory: MEMORY,
     rom: ROM,
 }
 
@@ -842,8 +842,296 @@ impl GAMEBOY {
                 self.cpu.add(d8);
                 return 8
             },
+            0xC7 => { return self.cpu.rst(0x00) }, // RST 00H
+            0xC8 => { // RET Z
+                if self.cpu.get_z_flag() {
+                    let value = self.pop_stack();
+                    self.cpu.set_pc(value);
+                    return 20;
+                }
+                8
+            },
+            0xC9 => { // RET
+                let value = self.pop_stack();
+                self.cpu.set_pc(value);
+                return 16
+            },
+            0xCA => { // JP Z, a16
+                if self.cpu.get_z_flag() {
+                    let d16 = self.read_d16();
+                    self.cpu.set_pc(d16);
+                }
+                12
+            },
+            0xCB => { // CB prefix
+                let opcode = self.memory.read_byte(self.cpu.get_pc());
+                return self.prefix_cb(opcode)
+            },
+            0xCC => { // CALL Z, a16
+                if self.cpu.get_z_flag() {
+                    let pc = self.cpu.get_pc();
+                    self.push_stack(pc);
+                    let d16 = self.read_d16();  
+                    self.cpu.set_pc(d16);
+                    return 24;
+                }
+                12
+            },
+            0xCD => { // CALL a16
+                let pc = self.cpu.get_pc();
+                self.push_stack(pc);
+                let d16 = self.read_d16();  
+                self.cpu.set_pc(d16);
+                return 24
+            },
+            0xCE => { // ADC A, d8
+                let d8 = self.read_d8();
+                self.cpu.adc(d8);
+                return 8
+            },
+            0xCF => { return self.cpu.rst(0x08) }, // RST 08H
+
+
+            0xD0 => { // RET NC
+                if !self.cpu.get_c_flag() {
+                    let value = self.pop_stack();
+                    self.cpu.set_pc(value);
+                    return 20;
+                }
+                8
+            },
+            0xD1 => { // POP DE
+                let value = self.pop_stack();
+                self.cpu.set_de(value);
+                return 12
+            },
+            0xD2 => { // JP NC, a16
+                if !self.cpu.get_c_flag() {
+                    let d16 = self.read_d16();
+                    self.cpu.set_pc(d16);
+                    return 16;
+                }
+                12
+            },
+            0xD3 => { return 4 }, // Illegal
+            0xD4 => { // CALL NC, a16
+                if !self.cpu.get_c_flag() {
+                    let pc = self.cpu.get_pc();
+                    self.push_stack(pc);
+                    let d16 = self.read_d16();  
+                    self.cpu.set_pc(d16);
+                    return 24;
+                }
+                12
+            },
+            0xD5 => { // PUSH DE
+                self.push_stack(self.cpu.get_de());
+                return 16
+            },
+            0xD6 => { // SUB d8
+                let d8 = self.read_d8();
+                self.cpu.sub(d8);
+                return 8
+            },
+            0xD7 => { return self.cpu.rst(0x10) }, // RST 10H
+            0xD8 => { // RET C
+                if self.cpu.get_c_flag() {
+                    let value = self.pop_stack();
+                    self.cpu.set_pc(value);
+                    return 20;
+                }
+                8
+            },
+            0xD9 => { // RETI
+                // TODO interrupt ??
+                return 16
+            },
+            0xDA => { // JP C, a16
+                if self.cpu.get_c_flag() {
+                    let d16 = self.read_d16();
+                    self.cpu.set_pc(d16);
+                    return 16;
+                }
+                12
+            },
+            0xDB => { return 4 }, // Illegal
+            0xDC => { // CALL C, a16
+                if self.cpu.get_c_flag() {
+                    let pc = self.cpu.get_pc();
+                    self.push_stack(pc);
+                    let d16 = self.read_d16();  
+                    self.cpu.set_pc(d16);
+                    return 24;
+                }
+                12
+            },
+            0xDD => { return 4 }, // Illegal
+            0xDE => { // SBC A, d8
+                let d8 = self.read_d8();
+                self.cpu.sbc(d8);
+                return 8
+            },
+            0xDF => { return self.cpu.rst(0x18) }, // RST 18H
+            
+
+            0xE0 => { // LDH (a8), A or LD A,($FF00+a8)
+                let a8 = self.read_d8();
+                self.cpu.set_a(self.memory.read_byte(0xFF00 + a8 as u16));
+                return 12
+            },
+            0xE1 => { // POP HL
+                let value = self.pop_stack();
+                self.cpu.set_hl(value);
+                return 12
+            },
+            0xE2 => { // LD (C), A
+                let c = self.cpu.get_c();
+                self.memory.write_byte(c as u16, self.cpu.get_a());
+                return 8
+            },
+            0xE3 => { return 4 }, // Illegal
+            0xE4 => { return 4 }, // Illegal
+            0xE5 => { // PUSH HL
+                self.push_stack(self.cpu.get_hl());
+                return 16
+            },
+            0xE6 => { // AND d8
+                let d8 = self.read_d8();
+                self.cpu.and(d8);
+                return 8
+            },
+            0xE7 => { return self.cpu.rst(0x20) }, // RST 20H
+            0xE8 => { // ADD SP, r8
+                let r8 = self.read_d8();
+                return self.cpu.add_sp(r8)
+            },
+            0xE9 => { // JP (HL)
+                let hl = self.cpu.get_hl();
+                self.cpu.set_pc(hl);
+                return 4
+            },
+            0xEA => { // LD (a16), A
+                let a16 = self.read_d16();
+                self.memory.write_byte(a16, self.cpu.get_a());
+                return 16
+            },
+            0xEB => { return 4 }, // Illegal
+            0xEC => { return 4 }, // Illegal
+            0xED => { return 4 }, // Illegal
+            0xEE => { // XOR d8
+                let d8 = self.read_d8();
+                self.cpu.xor(d8);
+                return 8
+            },
+            0xEF => { return self.cpu.rst(0x28) }, // RST 28H
+
+
+            0xF0 => { // LDH A, (a8) or LD ($FF00+a8),A
+                let a8 = self.read_d8();
+                self.memory.write_byte(0xFF00 + a8 as u16, self.cpu.get_a());
+                return 12
+            },
+            0xF1 => { // POP AF
+                let value = self.pop_stack();
+                self.cpu.set_af(value);
+                return 12
+            },
+            0xF2 => { // LD A, (C)
+                let c = self.cpu.get_c();
+                self.cpu.set_a(self.memory.read_byte(c as u16));
+                return 8
+            },
+            0xF3 => { // DI
+                //self.cpu.set_interrupts(false); 
+                // TODO di
+                return 4
+            },
+            0xF4 => { return 4 }, // Illegal
+            0xF5 => { // PUSH AF
+                self.push_stack(self.cpu.get_af());
+                return 16
+            },
+            0xF6 => { // OR d8
+                let d8 = self.read_d8();
+                self.cpu.or(d8);
+                return 8
+            },
+            0xF7 => { return self.cpu.rst(0x30) }, // RST 30H
+            0xF8 => { // LD HL, SP+r8 or LDHL SP,r8 //TODO flag
+                let r8 = self.read_d8();
+                let hl = self.cpu.get_sp() + r8 as u16;
+                self.cpu.set_hl(hl);
+                return 12
+            },
+            0xF9 => { // LD SP, HL
+                let hl = self.cpu.get_hl();
+                self.cpu.set_sp(hl);
+                return 8
+            },
+            0xFA => { // LD A, (a16)
+                let a16 = self.read_d16();
+                self.cpu.set_a(self.memory.read_byte(a16));
+                return 16
+            },
+            0xFB => { // EI
+                //self.cpu.set_interrupts(true);
+                // TODO ei
+                return 4
+            },
+            0xFC => { return 4 }, // Illegal
+            0xFD => { return 4 }, // Illegal
+            0xFE => { // CP d8
+                let d8 = self.read_d8();
+                self.cpu.cp(d8);
+                return 8
+            },
+            0xFF => { return self.cpu.rst(0x38) }, // RST 38H
             _ => panic!("Unimplemented opcode: {:X}", opcode),
         }
+    }
+
+    
+    pub fn prefix_cb(&mut self, opcode: u8) -> u8 {
+        match opcode {
+            0x00 => self.cpu.rlc("b"),
+            0x01 => self.cpu.rlc("c"),
+            0x02 => self.cpu.rlc("d"),
+            0x03 => self.cpu.rlc("e"),
+            0x04 => self.cpu.rlc("h"),
+            0x05 => self.cpu.rlc("l"),
+            0x06 => {
+                let value = self.memory.read_byte(self.cpu.get_hl());
+                let result = value.rotate_left(1);
+                self.cpu.flag_zero(result == 0);
+                self.cpu.flag_substract(false);
+                self.cpu.flag_half_carry(false);
+                self.memory.write_byte(self.cpu.get_hl(), result);
+            },
+            0x07 => self.cpu.rlc("a"),
+            0x08 => self.cpu.rrc("b"),
+            0x09 => self.cpu.rrc("c"),
+            0x0A => self.cpu.rrc("d"),
+            0x0B => self.cpu.rrc("e"),
+            0x0C => self.cpu.rrc("h"),
+            0x0D => self.cpu.rrc("l"),
+            0x0E => {
+                let value = self.memory.read_byte(self.cpu.get_hl());
+                let result = value.rotate_right(1);
+                self.cpu.flag_zero(result == 0);
+                self.cpu.flag_substract(false);
+                self.cpu.flag_half_carry(false);
+                self.memory.write_byte(self.cpu.get_hl(), result);
+            },
+            0x0F => self.cpu.rrc("a"),
+
+            0x10 => self.cpu.rl("b"),
+            _ => panic!("Invalid opcode"),
+        }
+
+        if opcode & 0b0000_1111 == 0x06 || opcode & 0b0000_1111 == 0x0E {
+            return 16;
+        }
+        8
     }
 
     fn read_d16(&mut self) -> u16 {
