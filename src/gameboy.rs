@@ -3,7 +3,7 @@ use super::rom::ROM;
 use super::cpu::LR35902;
 
 pub struct GAMEBOY {
-    cpu: LR35902,
+    pub cpu: LR35902,
     pub memory: MEMORY,
     rom: ROM,
 }
