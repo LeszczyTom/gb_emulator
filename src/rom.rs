@@ -1,7 +1,7 @@
 use std::{fs::File, io::{BufReader, Read}};
 
 pub struct ROM {
-    data: Vec<u8>,
+    pub data: Vec<u8>,
 }
 
 impl ROM {
