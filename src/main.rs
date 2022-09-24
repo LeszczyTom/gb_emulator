@@ -1,16 +1,16 @@
-pub mod cpu;
-pub mod memory;
-pub mod rom;
+#![warn(clippy::all, rust_2018_idioms)]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")] // hide console window on Windows in release
+
 pub mod gmb;
+pub mod app;
+
+use app::GMBApp;
 
 fn main() {
-    let rom_path = "./resources/tetris.gb";
-    let mut gmb = gmb::GMB::new();
-    let mut rom = rom::ROM::new();
-    rom.load_rom(rom_path);
-    //rom.dump_cartrige_info();
-    gmb.load_rom(rom.data);
-    gmb.reset();
-
-    gmb.run();
+    let native_options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "Gameboy Emulator",
+        native_options,
+        Box::new(|cc| Box::new(GMBApp::new(cc))),
+    );
 }

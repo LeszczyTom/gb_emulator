@@ -74,7 +74,7 @@ impl MEMORY {
         }
     }
 
-    fn dump_hex(&self, start: usize, end: usize) {
+    fn _dump_hex(&self, start: usize, end: usize) {
         let mut cpt = 0;
         for i in start..end {
             if cpt == 0 {
@@ -87,47 +87,47 @@ impl MEMORY {
         println!("|");
     }
 
-    pub fn dump_rom_bank_0(&self) {
-        self.dump_hex(0x0000, 0x4000);
+    pub fn _dump_rom_bank_0(&self) {
+        self._dump_hex(0x0000, 0x4000);
     }
 
-    pub fn dump_rom_bank_1(&self) {
-        self.dump_hex(0x4000, 0x8000);
+    pub fn _dump_rom_bank_1(&self) {
+        self._dump_hex(0x4000, 0x8000);
     }
 
-    pub fn dump_vram(&self) {
-        self.dump_hex(0x8000, 0xA000);
+    pub fn _dump_vram(&self) {
+        self._dump_hex(0x8000, 0xA000);
     }
 
-    pub fn dump_ext_ram(&self) {
-        self.dump_hex(0xA000, 0xC000);
+    pub fn _dump_ext_ram(&self) {
+        self._dump_hex(0xA000, 0xC000);
     }
 
-    pub fn dump_wram_0(&self) {
-        self.dump_hex(0xC000, 0xD000);
+    pub fn _dump_wram_0(&self) {
+        self._dump_hex(0xC000, 0xD000);
     }
 
-    pub fn dump_wram_1(&self) {
-        self.dump_hex(0xD000, 0xE000);
+    pub fn _dump_wram_1(&self) {
+        self._dump_hex(0xD000, 0xE000);
     }
 
-    pub fn dump_echo(&self) {
-        self.dump_hex(0xE000, 0xFE00);
+    pub fn _dump_echo(&self) {
+        self._dump_hex(0xE000, 0xFE00);
     }
 
-    pub fn dump_oam(&self) {
-        self.dump_hex(0xFE00, 0xFEA0);
+    pub fn _dump_oam(&self) {
+        self._dump_hex(0xFE00, 0xFEA0);
     }
 
-    pub fn dump_io_ports(&self) {
-        self.dump_hex(0xFF00, 0xFF80);
+    pub fn _dump_io_ports(&self) {
+        self._dump_hex(0xFF00, 0xFF80);
     }
 
-    pub fn dump_hram(&self) {
-        self.dump_hex(0xFF80, 0xFFFF);
+    pub fn _dump_hram(&self) {
+        self._dump_hex(0xFF80, 0xFFFF);
     }
 
-    pub fn dump_int_enable_reg(&self) {
-        self.dump_hex(0xFFFF, 0x10000);
+    pub fn _dump_int_enable_reg(&self) {
+        self._dump_hex(0xFFFF, 0x10000);
     }
 }

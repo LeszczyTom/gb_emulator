@@ -27,25 +27,25 @@ impl LR35902 {
         }
     }
 
-    pub fn get_a(&self) -> u8 { self.a }
-    pub fn get_b(&self) -> u8 { self.b }
-    pub fn get_c(&self) -> u8 { self.c }
-    pub fn get_d(&self) -> u8 { self.d }
-    pub fn get_e(&self) -> u8 { self.e }
-    pub fn get_h(&self) -> u8 { self.h }
-    pub fn get_l(&self) -> u8 { self.l }
-    pub fn get_f(&self) -> u8 { self.f }
+    pub fn _get_a(&self) -> u8 { self.a }
+    pub fn _get_b(&self) -> u8 { self.b }
+    pub fn _get_c(&self) -> u8 { self.c }
+    pub fn _get_d(&self) -> u8 { self.d }
+    pub fn _get_e(&self) -> u8 { self.e }
+    pub fn _get_h(&self) -> u8 { self.h }
+    pub fn _get_l(&self) -> u8 { self.l }
+    pub fn _get_f(&self) -> u8 { self.f }
     pub fn get_sp(&self) -> u16 { self.sp }
     pub fn get_pc(&self) -> u16 { self.pc }
 
-    pub fn set_a(&mut self, val: u8) { self.a = val }
-    pub fn set_b(&mut self, val: u8) { self.b = val }
-    pub fn set_c(&mut self, val: u8) { self.c = val }
-    pub fn set_d(&mut self, val: u8) { self.d = val }
-    pub fn set_e(&mut self, val: u8) { self.e = val }
-    pub fn set_h(&mut self, val: u8) { self.h = val }
-    pub fn set_l(&mut self, val: u8) { self.l = val }
-    pub fn set_f(&mut self, val: u8) { self.f = val }
+    pub fn _set_a(&mut self, val: u8) { self.a = val }
+    pub fn _set_b(&mut self, val: u8) { self.b = val }
+    pub fn _set_c(&mut self, val: u8) { self.c = val }
+    pub fn _set_d(&mut self, val: u8) { self.d = val }
+    pub fn _set_e(&mut self, val: u8) { self.e = val }
+    pub fn _set_h(&mut self, val: u8) { self.h = val }
+    pub fn _set_l(&mut self, val: u8) { self.l = val }
+    pub fn _set_f(&mut self, val: u8) { self.f = val }
     pub fn set_sp(&mut self, val: u16) { self.sp = val }
     pub fn set_pc(&mut self, val: u16) { self.pc = val }
 
