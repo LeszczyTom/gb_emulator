@@ -1,13 +1,17 @@
 mod cpu;
 mod memory;
 mod rom;
+mod ppu;
 
 use cpu::LR35902;
 use memory::MEMORY;
+use ppu::PPU;
+
 // http://bgb.bircd.org/pandocs.htm
 pub struct GMB {
     cpu: LR35902,
     memory: MEMORY,
+    pub ppu: PPU
 }
 
 impl GMB {
@@ -15,6 +19,7 @@ impl GMB {
         GMB {
             cpu: LR35902::new(),
             memory: MEMORY::new(),
+            ppu: PPU::new()
         }
     }
 
@@ -1602,14 +1607,14 @@ impl GMB {
     fn di(&mut self) -> u8 {
         // TODO: disable interrupts
         panic!("di not implemented");
-        4
+        //4
     }
 
     // ei
     fn ei(&mut self) -> u8 {
         // TODO: enable interrupts
         panic!("ei not implemented");
-        4
+        //4
     }
 
     // GMB Jumpcommands
