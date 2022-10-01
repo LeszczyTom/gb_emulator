@@ -10,7 +10,7 @@ use ppu::PPU;
 // http://bgb.bircd.org/pandocs.htm
 pub struct GMB {
     cpu: LR35902,
-    memory: MEMORY,
+    pub memory: MEMORY,
     pub ppu: PPU
 }
 
@@ -28,13 +28,16 @@ impl GMB {
     }
 
     pub fn cpu_debug(&self) -> String {
-        format!("\nAF: 0x{:04X}\n\nBC: 0x{:04X}\n\nDE: 0x{:04X}\n\nHL: 0x{:04X}\n\nPC: 0x{:04X}\n\nSP: 0x{:04X}\n\n\n\nop: 0x{:02X}", 
-            self.cpu.get_af(), self.cpu.get_bc(), self.cpu.get_de(), self.cpu.get_hl(), self.cpu.get_pc(), self.cpu.get_sp(), self.memory.read_byte(self.cpu.get_pc()))
+        format!("\nAF: 0x{:04X}\nBC: 0x{:04X}\nDE: 0x{:04X}\nHL: 0x{:04X}\nPC: 0x{:04X}\nSP: 0x{:04X}\na16:{:04X}\nop: 0x{:02X}\n\n", 
+            self.cpu.get_af(), self.cpu.get_bc(), self.cpu.get_de(), self.cpu.get_hl(), self.cpu.get_pc(), self.cpu.get_sp(), self.memory.read_word(u16::from_be_bytes([self.memory.read_byte(self.cpu.get_pc()), self.memory.read_byte(self.cpu.get_pc() + 1)])), self.memory.read_byte(self.cpu.get_pc()))
     }
 
     pub fn cycle(&mut self) -> u8 {
+        let pc = self.cpu.get_pc();
         let op = self.fetch_opcode();
-        self.execute_opcode(op) 
+        //println!("pc: {:04X}, op: {:02x}",pc , op);
+        //println!("{}", self.cpu_debug());
+        self.execute_opcode(op)
     }
 
     pub fn init(&mut self, rom_path: &str) {
@@ -54,6 +57,12 @@ impl GMB {
         opcode
     }
 
+    pub fn read_tile(&mut self) {
+        //let vram = self.memory.get_n_tiles(360);
+        let vram = self.memory.get_vram_bank_n(2);
+        self.ppu.read_tiles(vram);
+    }
+
     fn execute_opcode(&mut self, op: u8) -> u8 {
         match op {
             0x00 => self.nop(),
@@ -64,7 +73,7 @@ impl GMB {
             0x05 => self.dec_r("b"),
             0x06 => self.load_r_n("b"),
             0x07 => self.rlca(),
-            0x08 => 0,
+            0x08 => self.ld_nn_sp(),
             0x09 => self.add_hl_rr("bc"),
             0x0A => self.load_a_bc(),
             0x0B => self.dec_rr("bc"),
@@ -598,17 +607,25 @@ impl GMB {
         }
     }
 
+    fn read_n(&mut self) -> u8 {
+        let pc = self.cpu.get_pc();
+        let n = self.memory.read_byte(pc);
+        self.cpu.set_pc(pc.wrapping_add(1));
+        n
+    }
+
     fn read_nn(&mut self) -> u16 {
-        let nn = self.memory.read_word(self.cpu.get_pc());
-        self.cpu.set_pc(self.cpu.get_pc() + 2);
-        nn
+        let low = self.read_n();
+        let high = self.read_n();
+
+        u16::from_be_bytes([high, low])
     }
     
     //GMB 8bit-Loadcommands
     // ld r,r
     fn load_r_r(&mut self, r1: &str, r2: &str) -> u8 {
-        let r2 = self.cpu.get_r(r2) as u16;
-        self.cpu.set_r(r1, self.memory.read_byte(r2));
+        let r2 = self.cpu.get_r(r2);
+        self.cpu.set_r(r1, r2);
         4
     }
 
@@ -726,7 +743,7 @@ impl GMB {
         let hl = self.cpu.get_rr("hl");
         let a = self.cpu.get_r("a");
         self.memory.write_byte(hl, a);
-        self.cpu.set_rr("hl", hl + 1);
+        self.cpu.set_rr("hl", hl.overflowing_add(1).0);
         8
     }
 
@@ -734,7 +751,7 @@ impl GMB {
     fn load_a_hli(&mut self) -> u8 {
         let hl = self.cpu.get_rr("hl");
         self.cpu.set_r("a", self.memory.read_byte(hl));
-        self.cpu.set_rr("hl", hl + 1);
+        self.cpu.set_rr("hl", hl.overflowing_add(1).0);
         8
     }
 
@@ -743,7 +760,7 @@ impl GMB {
         let hl = self.cpu.get_rr("hl");
         let a = self.cpu.get_r("a");
         self.memory.write_byte(hl, a);
-        self.cpu.set_rr("hl", hl - 1);
+        self.cpu.set_rr("hl", hl.overflowing_sub(1).0);
         8
     }
 
@@ -751,7 +768,7 @@ impl GMB {
     fn load_a_hld(&mut self) -> u8 {
         let hl = self.cpu.get_rr("hl");
         self.cpu.set_r("a", self.memory.read_byte(hl));
-        self.cpu.set_rr("hl", hl - 1);
+        self.cpu.set_rr("hl", hl.overflowing_sub(1).0);
         8
     }
 
@@ -763,6 +780,14 @@ impl GMB {
         12
     }
 
+    fn ld_nn_sp(&mut self) -> u8 {
+        let nn = self.read_nn();
+        let sp = self.cpu.get_sp().to_be_bytes();
+        self.memory.write_byte(nn, sp[0]);
+        self.memory.write_byte(nn + 1, sp[1]);
+        20
+    }
+
     // ld sp,hl
     fn load_sp_hl(&mut self) -> u8 {
         let hl = self.cpu.get_rr("hl");
@@ -772,23 +797,35 @@ impl GMB {
 
     // push rr
     fn push_rr(&mut self, rr: &str) -> u8 {
-        let sp = self.cpu.get_rr("sp");
-        let value = self.cpu.get_rr(rr);
-        self.memory.write_word(sp - 2, value);
-        self.cpu.set_rr("sp", sp - 2);
+        let values = self.cpu.get_rr(rr).to_be_bytes();
+
+        let sp = self.cpu.get_rr("sp").wrapping_sub(1);
+        self.cpu.set_rr("sp", sp);
+
+        self.memory.write_byte(self.cpu.get_sp(), values[1]);
+
+        let sp = self.cpu.get_rr("sp").wrapping_sub(1);
+        self.cpu.set_rr("sp", sp);
+
+        self.memory.write_byte(self.cpu.get_sp(), values[0]);
+
         16
     }
 
     // pop rr
     fn pop_rr(&mut self, rr: &str) -> u8 {
         let sp = self.cpu.get_rr("sp");
-        let value = self.memory.read_word(sp);
-        if rr == "af" {
-            self.cpu.set_rr(rr, value & 0xFFF0);
-        } else {
-            self.cpu.set_rr(rr, value);
-        }
-        self.cpu.set_rr("sp", sp + 2);
+        let low = self.memory.read_byte(sp);
+        self.cpu.set_sp(sp.wrapping_add(1));
+
+        let sp = self.cpu.get_rr("sp");
+        let high = self.memory.read_byte(sp);
+        self.cpu.set_sp(sp.wrapping_add(1));
+        
+        let value = u16::from_be_bytes([high, low]);
+
+        self.cpu.set_rr(rr, value);
+        
         12
     }
 
@@ -801,7 +838,7 @@ impl GMB {
         self.cpu.set_r("a", result.0);
         self.cpu.set_flag("z", result.0 == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
+        self.cpu.set_flag("h", (a & 0x0f).checked_add(value | 0xf0).is_none());
         self.cpu.set_flag("c", result.1);
         4
     }
@@ -809,12 +846,12 @@ impl GMB {
     // add a,n
     fn add_n(&mut self) -> u8 {
         let a = self.cpu.get_r("a");
-        let n = self.fetch_opcode();
-        let result = a.overflowing_add(n);
+        let value = self.fetch_opcode();
+        let result = a.overflowing_add(value);
         self.cpu.set_r("a", result.0);
         self.cpu.set_flag("z", result.0 == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
+        self.cpu.set_flag("h", (a & 0x0f).checked_add(value | 0xf0).is_none());
         self.cpu.set_flag("c", result.1);
         8
     }
@@ -828,7 +865,7 @@ impl GMB {
         self.cpu.set_r("a", result.0);
         self.cpu.set_flag("z", result.0 == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
+        self.cpu.set_flag("h", (a & 0x0f).checked_add(value | 0xf0).is_none());
         self.cpu.set_flag("c", result.1);
         8
     }
@@ -837,29 +874,31 @@ impl GMB {
     fn adc_a_r(&mut self, r: &str) -> u8 {
         let a = self.cpu.get_r("a");
         let value = self.cpu.get_r(r);
-        let carry = self.cpu.get_flag("c");
-        let result = a.overflowing_add(value);
-        let result = result.0.overflowing_add(carry as u8);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let carry = self.cpu.get_flag("c") as u8;
+        let result = a.wrapping_add(value).wrapping_add(carry);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf) + (value & 0xf) + carry > 0xf);
+        self.cpu.set_flag("c", a as u16 + value as u16 + carry as u16 > 0xff);
+
         4
     }
 
     // adc a,n
     fn adc_a_n(&mut self) -> u8 {
         let a = self.cpu.get_r("a");
-        let n = self.fetch_opcode();
-        let carry = self.cpu.get_flag("c");
-        let result = a.overflowing_add(n);
-        let result = result.0.overflowing_add(carry as u8);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let value = self.fetch_opcode();
+        let carry = self.cpu.get_flag("c") as u8;
+        let result = a.wrapping_add(value).wrapping_add(carry);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf) + (value & 0xf) + carry > 0xf);
+        self.cpu.set_flag("c", a as u16 + value as u16 + carry as u16 > 0xff);
+        
         8
     }
 
@@ -868,14 +907,15 @@ impl GMB {
         let a = self.cpu.get_r("a");
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
-        let carry = self.cpu.get_flag("c");
-        let result = a.overflowing_add(value);
-        let result = result.0.overflowing_add(carry as u8);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let carry = self.cpu.get_flag("c") as u8;
+        let result = a.wrapping_add(value).wrapping_add(carry);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf) + (value & 0xf) + carry > 0xf);
+        self.cpu.set_flag("c", a as u16 + value as u16 + carry as u16 > 0xff);
+        
         8
     }
 
@@ -883,25 +923,29 @@ impl GMB {
     fn sub_r(&mut self, r: &str) -> u8 {
         let a = self.cpu.get_r("a");
         let value = self.cpu.get_r(r);
-        let result = a.overflowing_sub(value);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = a.wrapping_sub(value);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16));
+
         4
     }
 
     // sub n
     fn sub_n(&mut self) -> u8 {
         let a = self.cpu.get_r("a");
-        let n = self.fetch_opcode();
-        let result = a.overflowing_sub(n);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let value = self.fetch_opcode();
+        let result = a.wrapping_sub(value);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16));
+
         8
     }
 
@@ -910,12 +954,14 @@ impl GMB {
         let a = self.cpu.get_r("a");
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
-        let result = a.overflowing_sub(value);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = a.wrapping_sub(value);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16));
+        
         8
     }
 
@@ -923,29 +969,31 @@ impl GMB {
     fn sbc_a_r(&mut self, r: &str) -> u8 {
         let a = self.cpu.get_r("a");
         let value = self.cpu.get_r(r);
-        let carry = self.cpu.get_flag("c");
-        let result = a.overflowing_sub(value);
-        let result = result.0.overflowing_sub(carry as u8);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let carry = self.cpu.get_flag("c") as u8;
+        let result = a.wrapping_sub(value).wrapping_sub(carry);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf).wrapping_sub(carry) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16) + (carry as u16));
+
         4
     }
 
     // sbc a,n
     fn sbc_a_n(&mut self) -> u8 {
         let a = self.cpu.get_r("a");
-        let n = self.fetch_opcode();
-        let carry = self.cpu.get_flag("c");
-        let result = a.overflowing_sub(n);
-        let result = result.0.overflowing_sub(carry as u8);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let value = self.fetch_opcode();
+        let carry = self.cpu.get_flag("c") as u8;
+        let result = a.wrapping_sub(value).wrapping_sub(carry);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf).wrapping_sub(carry) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16) + (carry as u16));
+
         8
     }
 
@@ -954,14 +1002,15 @@ impl GMB {
         let a = self.cpu.get_r("a");
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
-        let carry = self.cpu.get_flag("c");
-        let result = a.overflowing_sub(value);
-        let result = result.0.overflowing_sub(carry as u8);
-        self.cpu.set_r("a", result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let carry = self.cpu.get_flag("c") as u8;
+        let result = a.wrapping_sub(value).wrapping_sub(carry);
+
+        self.cpu.set_r("a", result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf).wrapping_sub(carry) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16) + (carry as u16));
+
         8
     }
 
@@ -1089,23 +1138,27 @@ impl GMB {
     fn cp_r(&mut self, r: &str) -> u8 {
         let a = self.cpu.get_r("a");
         let value = self.cpu.get_r(r);
-        let result = a.overflowing_sub(value);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = a.wrapping_sub(value);
+
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16));
+
         4
     }
 
     // cp n
     fn cp_n(&mut self) -> u8 {
         let a = self.cpu.get_r("a");
-        let n = self.fetch_opcode();
-        let result = a.overflowing_sub(n);
-        self.cpu.set_flag("z", result.0 == 0);
+        let value = self.fetch_opcode();
+        let result = a.wrapping_sub(value);
+
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16));
+
         8
     }
 
@@ -1114,11 +1167,13 @@ impl GMB {
         let a = self.cpu.get_r("a");
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
-        let result = a.overflowing_sub(value);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = a.wrapping_sub(value);
+
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (a & 0xf).wrapping_sub(value & 0xf) & (0x10) != 0);
+        self.cpu.set_flag("c", (a as u16) < (value as u16));
+
         8
     }
 
@@ -1126,10 +1181,12 @@ impl GMB {
     fn inc_r(&mut self, r: &str) -> u8 {
         let value = self.cpu.get_r(r);
         let result = value.wrapping_add(1);
+
         self.cpu.set_r(r, result);
         self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result & 0x10 == 0x10);
+        self.cpu.set_flag("h", value & 0xf == 0xf);
+
         4
     }
 
@@ -1138,10 +1195,12 @@ impl GMB {
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
         let result = value.wrapping_add(1);
+
         self.memory.write_byte(hl, result);
         self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result & 0x10 == 0x10);
+        self.cpu.set_flag("h", value & 0xf == 0xf);
+
         12
     }
 
@@ -1149,10 +1208,12 @@ impl GMB {
     fn dec_r(&mut self, r: &str) -> u8 {
         let value = self.cpu.get_r(r);
         let result = value.wrapping_sub(1);
+
         self.cpu.set_r(r, result);
         self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result & 0x10 == 0x10);
+        self.cpu.set_flag("h", result & 0xf == 0);
+
         4
     }
 
@@ -1161,26 +1222,51 @@ impl GMB {
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
         let result = value.wrapping_sub(1);
+
         self.memory.write_byte(hl, result);
         self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result & 0x10 == 0x10);
+        self.cpu.set_flag("h", result & 0xf == 0);
+
         12
     }
 
-    // daa
+    // daa 
+    // https://forums.nesdev.org/viewtopic.php?t=15944#:~:text=Re%3A%20GameBoy%20%2D%20Help%20With%20DAA%20instruction&text=The%20DAA%20instruction%20adjusts%20the,%2C%20lower%20nybble%2C%20or%20both.
     fn daa(&mut self) -> u8 {
-        //TODO: implement
-        //self.memory.dump_vram();
-        //panic!("daa not implemented");
+        let mut a;
+        if self.cpu.get_flag("nz") {
+            a = self.cpu.get_r("a");
+            if self.cpu.get_flag("c") || a > 0x99 {
+                self.cpu.set_r("a", a.wrapping_add(0x60));
+                self.cpu.set_flag("c", true);
+            }
+            a = self.cpu.get_r("a");
+            if self.cpu.get_flag("h") || (a & 0x0f) > 0x09 {
+                self.cpu.set_r("a", a.wrapping_add(0x06));
+            }
+        } else {
+            if self.cpu.get_flag("c") {
+                a = self.cpu.get_r("a");
+                self.cpu.set_r("a", a.wrapping_sub(0x60));
+            }
+            if self.cpu.get_flag("h") {
+                a = self.cpu.get_r("a");
+                self.cpu.set_r("a", a.wrapping_sub(0x06));
+            }
+        }
+
+        a = self.cpu.get_r("a");
+        self.cpu.set_flag("z", a == 0);
+        self.cpu.set_flag("h", false);
+
         4
     }
 
     // cpl
     fn cpl(&mut self) -> u8 {
         let a = self.cpu.get_r("a");
-        let result = a ^ 0xFF;	
-        self.cpu.set_r("a", result);
+        self.cpu.set_r("a", !a);
         self.cpu.set_flag("n", true);
         self.cpu.set_flag("h", true);
         4
@@ -1191,27 +1277,29 @@ impl GMB {
     fn add_hl_rr(&mut self, rr: &str) -> u8 {
         let hl = self.cpu.get_rr("hl");
         let value = self.cpu.get_rr(rr);
-        let result = hl.overflowing_add(value);
-        self.cpu.set_rr("hl", result.0);
+        let result = hl.wrapping_add(value);
+
+        self.cpu.set_rr("hl", result);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x1000 == 0x1000);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (hl & 0xff) + (value & 0xff) > 0xff);
+        self.cpu.set_flag("c", hl as u32 + value as u32 > 0xffff);
+
         8
     }
 
     // inc rr
     fn inc_rr(&mut self, rr: &str) -> u8 {
-        let value = self.cpu.get_rr(rr);
-        let result = value.wrapping_add(1);
-        self.cpu.set_rr(rr, result);
+        let value = self.cpu.get_rr(rr).wrapping_add(1);
+        self.cpu.set_rr(rr, value);
+
         8
     }
 
     // dec rr
     fn dec_rr(&mut self, rr: &str) -> u8 {
-        let value = self.cpu.get_rr(rr);
-        let result = value.wrapping_sub(1);
-        self.cpu.set_rr(rr, result);
+        let value = self.cpu.get_rr(rr).wrapping_sub(1);
+        self.cpu.set_rr(rr, value);
+
         8
     }
 
@@ -1219,12 +1307,14 @@ impl GMB {
     fn add_sp_r8(&mut self) -> u8 {
         let sp = self.cpu.get_rr("sp");
         let r8 = self.fetch_opcode() as u16;
-        let result = sp.overflowing_add(r8);
-        self.cpu.set_rr("sp", result.0);
+        let result = sp.wrapping_add(r8);
+        
+        self.cpu.set_rr("sp", result);
         self.cpu.set_flag("z", false);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (sp & 0xff) + (r8 & 0xff) > 0xff);
+        self.cpu.set_flag("c", sp as u32 + r8 as u32 > 0xffff);
+
         16
     }
 
@@ -1232,12 +1322,13 @@ impl GMB {
     fn ldhl_sp_r8(&mut self) -> u8 {
         let sp = self.cpu.get_rr("sp");
         let r8 = self.fetch_opcode() as u16;
-        let result = sp.overflowing_add(r8);
-        self.cpu.set_rr("hl", result.0);
+        let result = sp.wrapping_add(r8);
+
+        self.cpu.set_rr("hl", result);
         self.cpu.set_flag("z", false);
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", result.0 & 0x10 == 0x10);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("h", (sp & 0xff) + (r8 & 0xff) > 0xff);
+        self.cpu.set_flag("c", sp as u32 + r8 as u32 > 0xffff);
         12
     }
 
@@ -1606,21 +1697,21 @@ impl GMB {
     // di
     fn di(&mut self) -> u8 {
         // TODO: disable interrupts
-        panic!("di not implemented");
-        //4
+        //println!("di not implemented");
+        4
     }
 
     // ei
     fn ei(&mut self) -> u8 {
         // TODO: enable interrupts
-        panic!("ei not implemented");
-        //4
+        println!("ei not implemented");
+        4
     }
 
     // GMB Jumpcommands
     // jp nn
     fn jp_nn(&mut self) -> u8 {
-        let nn = self.memory.read_word(self.cpu.get_pc());
+        let nn = self.read_nn();
         self.cpu.set_pc(nn);
         16
     }
@@ -1654,7 +1745,7 @@ impl GMB {
 
     // jr f,PC+dd
     fn jr_f_pc_dd(&mut self, f: &str) -> u8 {
-        let dd = self.memory.read_byte(self.cpu.get_pc());
+        let dd = self.read_n() as i8;
         let pc = self.cpu.get_pc();
         let result = pc.overflowing_add(dd as u16);
         if self.cpu.get_flag(f) {
@@ -1704,7 +1795,8 @@ impl GMB {
 
     // reti
     fn reti(&mut self) -> u8 {
-        // TODO: return and enable interrupts
+        // TODO: enable interrupts
+        self.ret();
         16
     }
 

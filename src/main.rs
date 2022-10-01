@@ -20,9 +20,10 @@ use winit::dpi::LogicalSize;
 struct App {
     gmb: GMB,
     pixels: Pixels,
+    paused: bool,
 }
 
-const FPS: u64 = 60;
+const FPS: u64 = 4_194_304;
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
 
@@ -46,21 +47,29 @@ fn main() -> Result<(), Error> {
     };
     
     let mut gmb = GMB::new();
-    gmb.init("resources/tetris.gb");
-    gmb.ppu.set_pixel_at(20, 20, [0x48, 0xb2, 0xe8, 0xff]);
+    gmb.init("resources/06-ld r,r.gb");
+    gmb.ppu.set_pixel_at(20, 20, 3);
 
     let app = App {
         gmb,
         pixels,
+        paused: false,
     };
 
     game_loop(event_loop, window, app, FPS as u32, 0.5, move |g| {
         // update
         g.game.gmb.cycle();
+        //println!("{}", g.game.gmb.cpu_debug());
+        //g.game.gmb.memory._dump_vram_1();
+        //g.game.gmb.memory._dump_oam();
     }, move |g| {
         // draw
-        g.game.gmb.ppu.draw(g.game.pixels.get_frame());
-        println!("{}", g.game.gmb.cpu_debug());
+        if g.game.gmb.ppu.is_updated() && !g.game.paused {
+            g.game.gmb.read_tile();
+            g.game.gmb.ppu.draw(g.game.pixels.get_frame());
+            g.game.gmb.ppu.reset_updated();
+        }
+        //println!("{}", g.game.gmb.cpu_debug());
         if let Err(e) = g.game.pixels.render() {
             println!("pixels.render() failed: {}", e);
             g.exit();
@@ -73,6 +82,7 @@ fn main() -> Result<(), Error> {
     }, |g, event| {
         match event {
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
+                g.game.paused = true;
                 g.exit();
             },
             Event::WindowEvent { 
@@ -80,6 +90,7 @@ fn main() -> Result<(), Error> {
                 event: WindowEvent::KeyboardInput { device_id: _, input, is_synthetic: _ } 
             } => {
                 println!("Keyboard input!: {:?}", input);
+                g.game.gmb.read_tile()
             },
             _ => {}
         }

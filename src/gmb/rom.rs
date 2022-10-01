@@ -1,4 +1,4 @@
-use std::{fs::File, io::{BufReader, Read}};
+use std::fs::read;
 
 pub struct ROM {
     pub data: Vec<u8>,
@@ -6,24 +6,15 @@ pub struct ROM {
 
 impl ROM {
     pub fn new(path :&str) -> ROM {
-        match File::open(path) {
-            Ok(file) => {
-                let mut reader = BufReader::new(file);
-                let mut buffer = Vec::new();
-                match reader.read_to_end(&mut buffer) {
-                    Ok(_) => { 
-                        if !header_checksum(&buffer) {
-                            panic!("Error: checksum failed!");
-                        }
-                        
-                        ROM {
-                            data: buffer,
-                        }
-                    },
-                    Err(_) => panic!("Error reading file"),
+        match read(path) {
+            Ok(bytes) => { 
+                ROM {
+                    data: bytes,
                 }
             },
-            Err(_) => panic!("Error opening file"),
+            Err(e) => {
+                panic!("Error: {}", e);
+            }
         }
     }
 

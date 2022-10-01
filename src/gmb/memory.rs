@@ -51,9 +51,9 @@ impl MEMORY {
 
     pub fn read_word(&self, addr: u16) -> u16 {
         let mut bytes = [0,0];
-        bytes[0] = self.data[addr as usize];
+        bytes[1] = self.data[addr as usize];
         let addr1 = addr.wrapping_add(1);
-        bytes[1] = self.data[addr1 as usize];
+        bytes[0] = self.data[addr1 as usize]; //?
         u16::from_be_bytes(bytes)
     }
 
@@ -74,7 +74,60 @@ impl MEMORY {
         }
     }
 
-    fn _dump_hex(&self, start: usize, end: usize) {
+    /// 0: 0x8000 - 0x87FF
+    /// 1: 0x8800 - 0x8FFF
+    /// 2: 0x9000 - 0x97FF
+    pub fn get_vram_bank_n(&self, n: u8) -> Vec<u8> { 
+        let mut vram = Vec::new();
+        match n {
+            0 => {
+                for i in 0x8000..0x8800 {
+                    vram.push(self.data[i]);
+                }
+            },
+            1 => {
+                for i in 0x8800..0x9000 {
+                    vram.push(self.data[i]);
+                }
+            },
+            2 => {
+                for i in 0x9000..0x9800 {
+                    vram.push(self.data[i]);
+                }
+            }
+            _ => panic!("Invalid block number"),
+        }
+        vram
+    }
+
+    pub fn get_lcdc(&self) -> u8 {
+        self.data[0xFF40]
+    }
+
+    pub fn get_n_tiles(&self, n: u16) -> Vec<u8> {
+        let mut tiles: Vec<u8> = Vec::new();
+        for _ in 0..n {
+            tiles.push(0xff);
+            tiles.push(0x00);
+            tiles.push(0x7e);
+            tiles.push(0xff);
+            tiles.push(0x85);
+            tiles.push(0x81);
+            tiles.push(0x89);
+            tiles.push(0x83);
+            tiles.push(0x93);
+            tiles.push(0x85);
+            tiles.push(0xa5);
+            tiles.push(0x8b);
+            tiles.push(0xc9);
+            tiles.push(0x97);
+            tiles.push(0x7e);
+            tiles.push(0xff);
+        };
+        tiles
+    }
+
+    pub fn _dump_hex(&self, start: usize, end: usize) {
         let mut cpt = 0;
         for i in start..end {
             if cpt == 0 {
@@ -97,6 +150,10 @@ impl MEMORY {
 
     pub fn _dump_vram(&self) {
         self._dump_hex(0x8000, 0xA000);
+    }
+    
+    pub fn _dump_vram_1(&self) {
+        self._dump_hex(0x8000, 0x8800);
     }
 
     pub fn _dump_ext_ram(&self) {
