@@ -1,4 +1,4 @@
-# gba_emulator
+# gb_emulator
 
 I'm making this GameBoy emulator to learn.
 
