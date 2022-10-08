@@ -109,7 +109,7 @@ impl ROM {
     }
 }
 
-fn header_checksum(data: &Vec<u8>) -> bool {
+fn _header_checksum(data: &Vec<u8>) -> bool {
     let mut sum: i16 = 0;
     for i in 0x134..0x14D {
         sum = sum - i16::from(data[i])  - 1;
