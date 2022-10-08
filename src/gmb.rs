@@ -2,6 +2,7 @@ mod cpu;
 mod memory;
 mod rom;
 mod ppu;
+pub mod test;
 
 use cpu::LR35902;
 use memory::MEMORY;
@@ -33,7 +34,7 @@ impl GMB {
     }
 
     pub fn cycle(&mut self) -> u8 {
-        let pc = self.cpu.get_pc();
+        //let pc = self.cpu.get_pc();
         let op = self.fetch_opcode();
         //println!("pc: {:04X}, op: {:02x}",pc , op);
         //println!("{}", self.cpu_debug());
@@ -798,16 +799,11 @@ impl GMB {
     // push rr
     fn push_rr(&mut self, rr: &str) -> u8 {
         let values = self.cpu.get_rr(rr).to_be_bytes();
+        let sp = self.cpu.get_rr("sp");
 
-        let sp = self.cpu.get_rr("sp").wrapping_sub(1);
-        self.cpu.set_rr("sp", sp);
-
-        self.memory.write_byte(self.cpu.get_sp(), values[1]);
-
-        let sp = self.cpu.get_rr("sp").wrapping_sub(1);
-        self.cpu.set_rr("sp", sp);
-
-        self.memory.write_byte(self.cpu.get_sp(), values[0]);
+        self.memory.write_byte(sp.wrapping_sub(1), values[0]); // high byte
+        self.memory.write_byte(sp.wrapping_sub(2), values[1]); // low byte
+        self.cpu.set_rr("sp", sp.wrapping_sub(2));
 
         16
     }
