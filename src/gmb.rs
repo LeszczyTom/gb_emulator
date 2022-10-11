@@ -1273,11 +1273,9 @@ impl GMB {
     fn add_hl_rr(&mut self, rr: &str) -> u8 {
         let hl = self.cpu.get_rr("hl");
         let value = self.cpu.get_rr(rr);
-        let result = hl.wrapping_add(value);
-
-        self.cpu.set_rr("hl", result);
+        self.cpu.set_rr("hl",  hl.wrapping_add(value));
         self.cpu.set_flag("n", false);
-        self.cpu.set_flag("h", (hl & 0xff) + (value & 0xff) > 0xff);
+        self.cpu.set_flag("h", (hl & 0xfff) + (value & 0xfff) > 0xfff);
         self.cpu.set_flag("c", hl as u32 + value as u32 > 0xffff);
 
         8

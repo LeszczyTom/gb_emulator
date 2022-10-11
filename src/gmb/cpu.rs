@@ -145,7 +145,7 @@ impl LR35902 {
         }
     }
 
-    pub fn get_flag(&mut self, flag: &str) -> bool {
+    pub fn get_flag(&self, flag: &str) -> bool {
         match flag {
             "z" => self.f & 0b10000000 != 0,
             "n" => self.f & 0b01000000 != 0,
