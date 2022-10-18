@@ -257,3 +257,262 @@ fn test_sbc_s() {
 
     //TODO: test all cases (carry, half carry, zero)
 }
+
+// and s - opcode[0xa0-0xa7 + 0xe6]
+#[test]
+fn test_and_s() {
+    let tuples = [("b", 0xa0), ("c", 0xa1), ("d", 0xa2), ("e", 0xa3),
+                  ("h", 0xa4), ("l", 0xa5), ("hl", 0xa6), ("a", 0xa7), ("n", 0xe6)];
+    // from book
+    // When A = 0x5a, l = 0x3f, (hl) = 0x00
+    // AND l ; A <- 0x1a, Z <- 0, N <- 0, H <- 1, C <- 0
+    test_r_r(("a", 0x5a), 
+        ("l", 0x3f), 
+        0xa5,
+        [false, false, false, false],
+        ("a", 0x1a),
+        [false, false, true, false],
+        4);
+
+    // AND 0x38 ; A <- 0x18, Z <- 0, N <- 0, H <- 1, C <- 0
+    test_r_r(("a", 0x5a), 
+        ("n", 0x38), 
+        0xe6,
+        [false, false, false, false],
+        ("a", 0x18),
+        [false, false, true, false],
+        8);
+
+    // AND (HL) ; A <- 0x00, Z <- 1, N <- 0, H <- 1, C <- 0
+    test_r_r(("a", 0x5a), 
+        ("hl", 0x00), 
+        0xa6,
+        [false, false, false, false],
+        ("a", 0x00),
+        [true, false, true, false],
+        8);
+
+    for tuple in tuples {
+        match tuple.0 {
+            "n" | "hl" => {
+                // When A = 0x01, S = 0x01, (hl) = 0x01
+                // AND S ; A <- 0x01, Z <- 0, N <- 0, H <- 1, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x01), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x01),
+                [false, false, true, false],
+                8);
+                
+                // When A = 0x01, S = 0x10, (hl) = 0x10
+                // AND S ; A <- 0x1a, Z <- 0, N <- 0, H <- 1, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x10), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x00),
+                [true, false, true, false],
+                8);
+            },
+            _ => {
+                if tuple.0 == "a" {
+                    // TODO
+                    continue;
+                }
+                // When A = 0x01, S = 0x01, (hl) = 0x01
+                // AND S ; A <- 0x1a, Z <- 0, N <- 0, H <- 1, C <- 0
+                test_r_r(("a", 0x5a), 
+                (tuple.0, 0x3f), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x1a),
+                [false, false, true, false],
+                4);
+
+                // When A = 0x01, S = 0x10, (hl) = 0x10
+                // AND S ; A <- 0x1a, Z <- 0, N <- 0, H <- 1, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x10), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x00),
+                [true, false, true, false],
+                4);
+            }
+        }
+    }
+}
+
+// xor s - opcode[0xa8-0xaf + 0xee]
+#[test]
+fn test_xor_s() {
+    let tuples = [("b", 0xa8), ("c", 0xa9), ("d", 0xaa), ("e", 0xab),
+                  ("h", 0xac), ("l", 0xad), ("hl", 0xae), ("a", 0xaf), ("n", 0xee)];
+    // from book
+    // When A = 0xff, (hl) = 0x8a
+    // XOR A ; A <- 0x00, Z <- 1, N <- 0, H <- 0, C <- 0
+    test_r_r(("a", 0xff), 
+        ("a", 0xff), 
+        0xaf,
+        [false, false, false, false],
+        ("a", 0x00),
+        [true, false, false, false],
+        4);
+
+    // XOR 0x0f ; A <- 0xf0, Z <- 0, N <- 0, H <- 0, C <- 0
+    test_r_r(("a", 0xff), 
+        ("n", 0x0f), 
+        0xee,
+        [false, false, false, false],
+        ("a", 0xf0),
+        [false, false, false, false],
+        8);
+
+    // XOR (HL) ; A <- 0x75, Z <- 0, N <- 0, H <- 0, C <- 0
+    test_r_r(("a", 0xff), 
+        ("hl", 0x8a), 
+        0xae,
+        [false, false, false, false],
+        ("a", 0x75),
+        [false, false, false, false],
+        8);
+
+    for tuple in tuples {
+        match tuple.0 {
+            "hl" | "n" => {
+                // When A = 0x01, S = 0x01, (hl) = 0x01
+                // XOR S ; A <- 0x00, Z <- 1, N <- 0, H <- 0, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x01), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x00),
+                [true, false, false, false],
+                8);
+                
+                // When A = 0x01, S = 0x10, (hl) = 0x10
+                // XOR S ; A <- 0x1a, Z <- 0, N <- 0, H <- 1, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x10), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x11),
+                [false, false, false, false],
+                8);
+            },
+            _ => {
+                if tuple.0 == "a" {
+                    // TODO
+                    continue;
+                }
+                // When A = 0x01, S = 0x01, (hl) = 0x01
+                // XOR S ; A <- 0x00, Z <- 1, N <- 0, H <- 0, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x01), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x00),
+                [true, false, false, false],
+                4);
+                
+                // When A = 0x01, S = 0x10, (hl) = 0x10
+                // XOR S ; A <- 0x1a, Z <- 0, N <- 0, H <- 1, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x10), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x11),
+                [false, false, false, false],
+                4); 
+            }
+        }
+    }
+}
+
+// or s - opcode[0xb0-0xb7 + 0xf6]
+#[test]
+fn test_or_s() {
+    let tuples = [("b", 0xb0), ("c", 0xb1), ("d", 0xb2), ("e", 0xb3),
+                  ("h", 0xb4), ("l", 0xb5), ("hl", 0xb6), ("a", 0xb7), ("n", 0xf6)];
+
+    // from book
+    // When A = 0x5a, (hl) = 0x0f
+    // OR A ; A <- 0x5a, Z <- 0, N <- 0, H <- 0, C <- 0
+    test_r_r(("a", 0x5a), 
+        ("a", 0x5a), 
+        0xb7,
+        [false, false, false, false],
+        ("a", 0x5a),
+        [false, false, false, false],
+        4);
+
+    // OR 0x3 ; A <- 0x5b, Z <- 0, N <- 0, H <- 0, C <- 0
+    test_r_r(("a", 0x5a), 
+        ("n", 0x3), 
+        0xf6,
+        [false, false, false, false],
+        ("a", 0x5b),
+        [false, false, false, false],
+        8);
+
+    // OR (HL) ; A <- 0x5f, Z <- 0, N <- 0, H <- 0, C <- 0
+    test_r_r(("a", 0x5a), 
+        ("hl", 0x0f), 
+        0xb6,
+        [false, false, false, false],
+        ("a", 0x5f),
+        [false, false, false, false],
+        8);
+
+    for tuple in tuples {
+        match tuple.0 {
+            "hl" | "n" => {
+                // When A = 0x01, S = 0x01, (hl) = 0x01
+                // OR S ; A <- 0x01, Z <- 0, N <- 0, H <- 0, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x01), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x01),
+                [false, false, false, false],
+                8);
+                
+                // When A = 0x01, S = 0x10, (hl) = 0x10
+                // OR S ; A <- 0x11, Z <- 0, N <- 0, H <- 0, C <- 0
+                test_r_r(("a", 0x01), 
+                (tuple.0, 0x10), 
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x11),
+                [false, false, false, false],
+                8);
+            },
+            _ => {
+                if tuple.0 == "a" {
+                    // TODO
+                    continue;
+                }
+                // When A = 0x01, S = 0x01
+                // OR S ; A <- 0x01, Z <- 0, N <- 0, H <- 0, C <- 0
+                test_r_r(("a", 0x01),
+                (tuple.0, 0x01),
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x01),
+                [false, false, false, false],
+                4);
+
+                // When A = 0x00, S = 0x00
+                // OR S ; A <- 0x00, Z <- 1, N <- 0, H <- 0, C <- 0
+                test_r_r(("a", 0x00),
+                (tuple.0, 0x00),
+                tuple.1,
+                [false, false, false, false],
+                ("a", 0x00),
+                [true, false, false, false],
+                4);
+            }
+        }
+    }
+}
