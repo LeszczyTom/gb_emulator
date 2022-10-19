@@ -1347,7 +1347,6 @@ impl GMB {
         } else {
             self.cpu.set_r("a", res & 0xFE);
         }
-        self.cpu.set_r("a", res);
         self.cpu.set_flag("z", false);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
@@ -1376,7 +1375,6 @@ impl GMB {
         } else {
             self.cpu.set_r("a", res & 0x7F);
         }
-        self.cpu.set_r("a", res);
         self.cpu.set_flag("z", false);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
@@ -1418,7 +1416,8 @@ impl GMB {
         } else {
             self.cpu.set_r(r, result & 0xFE);
         }
-        self.cpu.set_flag("z", result == 0);
+        let r = self.cpu.get_r(r);
+        self.cpu.set_flag("z", r == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
         self.cpu.set_flag("c", value & 0x80 == 0x80);
@@ -1435,7 +1434,8 @@ impl GMB {
         } else {
             self.memory.write_byte(hl, result & 0xFE);
         }
-        self.cpu.set_flag("z", result == 0);
+        let r = self.memory.read_byte(hl);
+        self.cpu.set_flag("z", r == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
         self.cpu.set_flag("c", value & 0x80 == 0x80);
@@ -1476,7 +1476,8 @@ impl GMB {
         } else {
             self.cpu.set_r(r, result & 0x7F);
         }
-        self.cpu.set_flag("z", result == 0);
+        let r = self.cpu.get_r(r);
+        self.cpu.set_flag("z", r == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
         self.cpu.set_flag("c", value & 0x01 == 0x01);
@@ -1493,7 +1494,8 @@ impl GMB {
         } else {
             self.memory.write_byte(hl, result & 0x7F);
         }
-        self.cpu.set_flag("z", result == 0);
+        let r = self.memory.read_byte(hl);
+        self.cpu.set_flag("z", r == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
         self.cpu.set_flag("c", value & 0x01 == 0x01);
@@ -1503,12 +1505,13 @@ impl GMB {
     // sla r
     fn sla_r(&mut self, r: &str) -> u8 {
         let value = self.cpu.get_r(r);
-        let result = value.overflowing_shl(1);
-        self.cpu.set_r(r, result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = value << 1;
+        
+        self.cpu.set_r(r, result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("c", value & 0x80 == 0x80);
         8
     }
 
@@ -1516,12 +1519,12 @@ impl GMB {
     fn sla_hl(&mut self) -> u8 {
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
-        let result = value.overflowing_shl(1);
-        self.memory.write_byte(hl, result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = value << 1;
+        self.memory.write_byte(hl, result);
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("c", value & 0x80 == 0x80);
         16
     }
 
@@ -1553,12 +1556,16 @@ impl GMB {
     // sra r
     fn sra_r(&mut self, r: &str) -> u8 {
         let value = self.cpu.get_r(r);
-        let result = value.overflowing_shr(1);
-        self.cpu.set_r(r, result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = value >> 1;
+        if value & 0x80 == 0x80 {
+            self.cpu.set_r(r, result | 0x80);
+        } else {
+            self.cpu.set_r(r, result & 0x7F);
+        }
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("c", value & 0x01 == 0x01);
         8
     }
 
@@ -1566,12 +1573,16 @@ impl GMB {
     fn sra_hl(&mut self) -> u8 {
         let hl = self.cpu.get_rr("hl");
         let value = self.memory.read_byte(hl);
-        let result = value.overflowing_shr(1);
-        self.memory.write_byte(hl, result.0);
-        self.cpu.set_flag("z", result.0 == 0);
+        let result = value >> 1;
+        if value & 0x80 == 0x80 {
+            self.memory.write_byte(hl, result | 0x80);
+        } else {
+            self.memory.write_byte(hl, result & 0x7F);
+        }
+        self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", false);
         self.cpu.set_flag("h", false);
-        self.cpu.set_flag("c", result.1);
+        self.cpu.set_flag("c", value & 0x01 == 0x01);
         16
     }
 

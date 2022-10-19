@@ -4,6 +4,7 @@ mod test_8bit_loadcommands;
 mod test_16bit_loadcomands;
 mod test_8bit_arithmetic_logical_commands;
 mod test_16bit_arithmetic_logical_commands;
+mod test_rotate_und_shift_commands;
 
 pub fn get_test_gmb(opcode: u8) -> GMB {
     let mut gmb = GMB::new();
