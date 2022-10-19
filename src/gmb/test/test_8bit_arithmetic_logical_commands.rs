@@ -2,7 +2,6 @@
 /// r, n, and (HL) are used for operand s
 #[cfg(test)] 
 fn test_r_r(r: (&str, u8), s: (&str, u8), opcode: u8, flags: [bool; 4], expected_result: (&str, u8), expected_flags: [bool; 4], expected_cycle: u8) {
-    //println!("Testing ADD A, {}", s.0);
     let mut gmb = super::get_test_gmb(opcode);
     super::set_flags(flags, &mut gmb);
     match s.0 {
@@ -26,6 +25,32 @@ fn test_r_r(r: (&str, u8), s: (&str, u8), opcode: u8, flags: [bool; 4], expected
         _ => {
             gmb.cpu.set_r(r.0, r.1);
             gmb.cpu.set_r(s.0, s.1);
+            assert_eq!(gmb.cycle(), expected_cycle);                            
+            assert_eq!(gmb.cpu.get_r(expected_result.0), expected_result.1);
+            assert_eq!(super::check_flags(expected_flags, &gmb), true);
+        }
+    }
+}
+
+/// r: (&str, u8) = (register, value)
+#[cfg(test)] 
+fn test_r(r: (&str, u8), opcode: u8, flags: [bool; 4], expected_result: (&str, u8), expected_flags: [bool; 4], expected_cycle: u8) {
+    let mut gmb = super::get_test_gmb(opcode);
+    super::set_flags(flags, &mut gmb);
+    match r.0 {
+        "hl" => {
+            gmb.cpu.set_rr("hl", 0x1234);
+            gmb.memory.write_byte(0x1234, r.1);
+            let expected_flags = expected_flags;
+            assert_eq!(gmb.cycle(), expected_cycle);
+            assert_eq!(gmb.memory.read_byte(gmb.cpu.get_rr("hl")), expected_result.1);
+            assert_eq!(super::check_flags(expected_flags, &gmb), true);
+        },
+        "n" => {
+            println!("n not implemented");
+        },
+        _ => {
+            gmb.cpu.set_r(r.0, r.1);
             assert_eq!(gmb.cycle(), expected_cycle);                            
             assert_eq!(gmb.cpu.get_r(expected_result.0), expected_result.1);
             assert_eq!(super::check_flags(expected_flags, &gmb), true);
@@ -515,4 +540,154 @@ fn test_or_s() {
             }
         }
     }
+}
+
+// cp s - opcode[0xb8-0xbf + 0xfe]
+#[test]
+fn test_cp_s() {
+    // from book
+    // When A = 0x3c, B = 0x2f, (hl) = 0x40
+    // CP B ; Z <- 0, N <- 1, H <- 1, C <- 0
+    test_r_r(("a", 0x3c), 
+        ("b", 0x2f), 
+        0xb8,
+        [false, false, false, false],
+        ("a", 0x3c),
+        [false, true, true, false],
+        4);
+        
+    // CP 0x3c ; Z <- 1, N <- 1, H <- 0, C <- 0
+    test_r_r(("a", 0x3c), 
+        ("n", 0x3c), 
+        0xfe,
+        [false, false, false, false],
+        ("a", 0x3c),
+        [true, true, false, false],
+        8);
+
+    // CP (HL) ; Z <- 0, N <- 1, H <- 0, C <- 1
+    test_r_r(("a", 0x3c), 
+        ("hl", 0x40), 
+        0xbe,
+        [false, false, false, false],
+        ("a", 0x3c),
+        [false, true, false, true],
+        8);
+
+    // TODO: more tests
+}
+
+// inc r
+#[test]
+fn test_inc_r() {
+    // from book
+    // When A = 0xff
+    // INC A ; A <- 0x00, Z <- 1, N <- 0, H <- 1
+    test_r( ("a", 0xff), 
+        0x3c,
+        [false, false, false, false],
+        ("a", 0x00),
+        [true, false, true, false],
+        4);
+
+    // TODO: add tests for other opcodes
+}
+
+// inc (hl)
+#[test]
+fn test_inc_hl() {
+    // from book
+    // When (hl) = 0x50
+    // INC (HL) ; (hl) <- 0x51, Z <- 0, N <- 0, H <- 0
+    test_r( ("hl", 0x50), 
+        0x34,
+        [false, false, false, false],
+        ("hl", 0x51),
+        [false, false, false, false],
+        12);
+    // TODO: add tests for other opcodes
+}
+
+// dec r
+#[test]
+fn test_dec_r() {
+    // from book
+    // When L = 0x01
+    // DEC L ; L <- 0x00, Z <- 1, N <- 1, H <- 0
+    test_r( ("l", 0x01), 
+        0x2d,
+        [false, false, false, false],
+        ("l", 0x00),
+        [true, true, false, false],
+        4);
+    // TODO: add tests for other opcodes
+}
+
+// dec (hl)
+#[test]
+fn test_dec_hl() {
+    // from book
+    // When (hl) = 0x00
+    // DEC (HL) ; (hl) <- 0xff, Z <- 0, N <- 1, H <- 1
+    test_r( ("hl", 0x00), 
+        0x35,
+        [false, false, false, false],
+        ("hl", 0xff),
+        [false, true, true, false],
+        12);
+    // TODO: add tests for other opcodes
+}
+
+// daa
+#[test]
+fn test_daa() {
+    // from book
+    // When A = 0x45 and B = 0x38
+    // ADD A,B ; A <- 0x7d, N <- 0
+    test_r_r( ("a", 0x45), 
+        ("b", 0x38), 
+        0x80,
+        [false, false, false, false],
+        ("a", 0x7d),
+        [false, false, false, false],
+        4);
+    
+    // DAA ; A <- 0x83, C <- 0
+    test_r(("a", 0x7d),
+        0x27,
+        [false, false, false, false],
+        ("a", 0x83),
+        [false, false, false, false],
+        4);
+
+    // SUB A,B ; A <- 0x83 - 0x38 (0x4B), N <- 1
+    test_r_r( ("a", 0x83), 
+        ("b", 0x38), 
+        0x90,
+        [false, false, false, false],
+        ("a", 0x4b),
+        [false, true, true, false],
+        4);
+
+    // DAA ; A <- 0x45, C <- 1
+    test_r(("a", 0x4b),
+        0x27,
+        [false, true, true, false],
+        ("a", 0x45),
+        [false, true, false, false],
+        4);
+}
+
+// cpl
+#[test]
+fn test_cpl() {
+    // from book
+    // When A = 0x35
+    // CPL ; A <- 0xca
+    test_r( ("a", 0x35), 
+        0x2f,
+        [false, false, false, false],
+        ("a", 0xca),
+        [false, true, true, false],
+        4);
 }

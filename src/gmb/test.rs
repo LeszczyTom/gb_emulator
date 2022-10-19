@@ -14,10 +14,22 @@ pub fn get_test_gmb(opcode: u8) -> GMB {
 
 /// [z,n,h,c] 
 pub fn check_flags(flags: [bool; 4], gmb: &GMB) -> bool {
-    if gmb.cpu.get_flag("z") != flags[0] { return false; }
-    if gmb.cpu.get_flag("n") != flags[1] { return false; }
-    if gmb.cpu.get_flag("h") != flags[2] { return false; }
-    if gmb.cpu.get_flag("c") != flags[3] { return false; }
+    if gmb.cpu.get_flag("z") != flags[0] { 
+        println!("z flag is not correct");
+        return false;
+    }
+    if gmb.cpu.get_flag("n") != flags[1] { 
+        println!("n flag is not correct");
+        return false; 
+    }
+    if gmb.cpu.get_flag("h") != flags[2] { 
+        println!("h flag is not correct");
+        return false; 
+    }
+    if gmb.cpu.get_flag("c") != flags[3] { 
+        println!("c flag is not correct");
+        return false; 
+    }
     true
 }
 

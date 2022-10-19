@@ -1208,7 +1208,7 @@ impl GMB {
         self.cpu.set_r(r, result);
         self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result & 0xf == 0);
+        self.cpu.set_flag("h", value & 0xf == 0);
 
         4
     }
@@ -1222,40 +1222,39 @@ impl GMB {
         self.memory.write_byte(hl, result);
         self.cpu.set_flag("z", result == 0);
         self.cpu.set_flag("n", true);
-        self.cpu.set_flag("h", result & 0xf == 0);
+        self.cpu.set_flag("h", value & 0xf == 0);
 
         12
     }
 
     // daa 
-    // https://forums.nesdev.org/viewtopic.php?t=15944#:~:text=Re%3A%20GameBoy%20%2D%20Help%20With%20DAA%20instruction&text=The%20DAA%20instruction%20adjusts%20the,%2C%20lower%20nybble%2C%20or%20both.
     fn daa(&mut self) -> u8 {
-        let mut a;
-        if self.cpu.get_flag("nz") {
-            a = self.cpu.get_r("a");
-            if self.cpu.get_flag("c") || a > 0x99 {
+        let mut c = false;
+        if !self.cpu.get_flag("n") {
+            if self.cpu.get_flag("c") || self.cpu.get_r("a") > 0x99 {
+                let a = self.cpu.get_r("a");
                 self.cpu.set_r("a", a.wrapping_add(0x60));
-                self.cpu.set_flag("c", true);
+                c = true;
             }
-            a = self.cpu.get_r("a");
-            if self.cpu.get_flag("h") || (a & 0x0f) > 0x09 {
-                self.cpu.set_r("a", a.wrapping_add(0x06));
+            if self.cpu.get_flag("h") || self.cpu.get_r("a") & 0xf > 0x9 {
+                let a = self.cpu.get_r("a");
+                self.cpu.set_r("a", a.wrapping_add(0x6));
             }
-        } else {
-            if self.cpu.get_flag("c") {
-                a = self.cpu.get_r("a");
-                self.cpu.set_r("a", a.wrapping_sub(0x60));
-            }
-            if self.cpu.get_flag("h") {
-                a = self.cpu.get_r("a");
-                self.cpu.set_r("a", a.wrapping_sub(0x06));
-            }
+        } else if self.cpu.get_flag("c") {
+            c = true;
+            let a = self.cpu.get_r("a");
+            self.cpu.set_r("a", a.wrapping_add(
+                if self.cpu.get_flag("h") { 0x9a } else { 0xa0 }
+            ));
+        } else if self.cpu.get_flag("h") {
+            let a = self.cpu.get_r("a");
+            self.cpu.set_r( "a", a.wrapping_add(0xfa));
         }
 
-        a = self.cpu.get_r("a");
+        let a = self.cpu.get_r("a");
         self.cpu.set_flag("z", a == 0);
         self.cpu.set_flag("h", false);
-
+        self.cpu.set_flag("c", c);
         4
     }
 
