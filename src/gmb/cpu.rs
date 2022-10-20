@@ -9,6 +9,7 @@ pub struct LR35902 {
     l: u8,
     sp: u16,
     pc: u16,
+    ime: bool,
 }
 
 impl LR35902 {
@@ -24,6 +25,7 @@ impl LR35902 {
             f: 0,
             pc: 0, // Starting at cartridge first instruction bc no bios
             sp: 0,
+            ime: false,
         }
     }
 
@@ -165,4 +167,8 @@ impl LR35902 {
         self.set_sp(0xfffe);    
         self.set_pc(0x0100);
     }
+
+    pub fn set_ime(&mut self) { self.ime = true; }
+    pub fn clear_ime(&mut self) { self.ime = false; }
+    pub fn get_ime(&self) -> bool { self.ime }
 }

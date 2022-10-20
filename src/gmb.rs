@@ -1734,13 +1734,15 @@ impl GMB {
             self.cpu.set_pc(nn);
             16
         } else {
+            let pc = self.cpu.get_pc();
+            self.cpu.set_pc(pc + 2);
             12
         }
     }
 
     // jr PC+dd 
     fn jr_pc_dd(&mut self) -> u8 {
-        let dd = self.memory.read_byte(self.cpu.get_pc());
+        let dd: i8 = self.read_n() as i8;
         let pc = self.cpu.get_pc();
         let result = pc.overflowing_add(dd as u16);
         self.cpu.set_pc(result.0);
@@ -1765,8 +1767,9 @@ impl GMB {
         let nn = self.memory.read_word(self.cpu.get_pc());
         let pc = self.cpu.get_pc();
         let sp = self.cpu.get_rr("sp");
-        let result = sp.overflowing_sub(2);
-        self.memory.write_word(result.0, pc);   
+        let result = sp.wrapping_sub(2);
+        self.memory.write_word(result, pc + 2);  
+        self.cpu.set_rr("sp", result); 
         self.cpu.set_pc(nn);     
         24
     }
@@ -1776,6 +1779,8 @@ impl GMB {
         if self.cpu.get_flag(f) {
             self.call_nn()
         } else {
+            let pc = self.cpu.get_pc();
+            self.cpu.set_pc(pc + 2);
             12
         }
     }
@@ -1783,7 +1788,9 @@ impl GMB {
     // ret
     fn ret(&mut self) -> u8 {
         let sp = self.cpu.get_rr("sp");
-        self.cpu.set_pc(self.memory.read_word(sp));
+        let l: u8 = self.memory.read_byte(sp);
+        let h: u8 = self.memory.read_byte(sp + 1);
+        self.cpu.set_pc(u16::from_be_bytes([h, l]));
         self.cpu.set_sp(sp.wrapping_add(2));
         16
     }
@@ -1791,16 +1798,19 @@ impl GMB {
     // ret f
     fn ret_f(&mut self, f: &str) -> u8 {
         if self.cpu.get_flag(f) {
-            self.ret()
+            self.ret();
+            return 20;
         } else {
+            let pc = self.cpu.get_pc();
+            self.cpu.set_pc(pc + 1);
             8
         }
     }
 
     // reti
     fn reti(&mut self) -> u8 {
-        // TODO: enable interrupts
         self.ret();
+        self.cpu.set_ime();
         16
     }
 
@@ -1809,7 +1819,8 @@ impl GMB {
         let pc = self.cpu.get_pc();
         let sp = self.cpu.get_rr("sp");
         let result = sp.overflowing_sub(2);
-        self.memory.write_word(result.0, pc);   
+        self.memory.write_word(result.0, pc);
+        self.cpu.set_rr("sp", result.0);
         self.cpu.set_pc(n);     
         16
     }
