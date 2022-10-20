@@ -34,6 +34,10 @@ impl GMB {
     }
 
     pub fn cycle(&mut self) -> u8 {
+        if self.cpu.get_halt() {
+            return 4;
+        }
+
         //let pc = self.cpu.get_pc();
         let op = self.fetch_opcode();
         //println!("pc: {:04X}, op: {:02x}",pc , op);
@@ -1686,29 +1690,24 @@ impl GMB {
 
     // halt
     fn halt(&mut self) -> u8 {
-        // TODO: halt
-        panic!("halt not implemented");
-        //4
+        self.cpu.set_halt();
+        4
     }
 
     // stop
     fn stop(&mut self) -> u8 {
-        // TODO: stop
-        panic!("stop not implemented");
-        //4
+        panic!("STOP");
     }
 
     // di
     fn di(&mut self) -> u8 {
-        // TODO: disable interrupts
-        //println!("di not implemented");
+        self.cpu.clear_ime();
         4
     }
 
     // ei
     fn ei(&mut self) -> u8 {
-        // TODO: enable interrupts
-        println!("ei not implemented");
+        self.cpu.set_ime();
         4
     }
 
