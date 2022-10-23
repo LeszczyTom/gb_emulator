@@ -143,16 +143,16 @@ fn test_call_cc_nn() {
 fn test_ret() {
     let mut gmb = super::get_test_gmb(0xc9);
     gmb.cpu.set_sp(0xfffe);
-    gmb.memory.write_byte(0xfffe, 0x34);
-    gmb.memory.write_byte(0xffff, 0x12);
+    gmb.memory.write_byte(0xfffe, 0x12);
+    gmb.memory.write_byte(0xffff, 0x34);
     assert_eq!(gmb.cycle(), 16);
     assert_eq!(gmb.cpu.get_pc(), 0x1234);
     assert_eq!(gmb.cpu.get_sp(), 0x0000);
     
     let mut gmb = super::get_test_gmb(0xc9);
     gmb.cpu.set_sp(0x0111);
-    gmb.memory.write_byte(0x111, 0x34);
-    gmb.memory.write_byte(0x112, 0x12);
+    gmb.memory.write_byte(0x111, 0x12);
+    gmb.memory.write_byte(0x112, 0x34);
     assert_eq!(gmb.cycle(), 16);
     assert_eq!(gmb.cpu.get_pc(), 0x1234);
     assert_eq!(gmb.cpu.get_sp(), 0x0113);
@@ -162,16 +162,16 @@ fn test_ret() {
 fn test_ret_cc() {
     let mut gmb = super::get_test_gmb(0xc0);
     gmb.cpu.set_sp(0xfffe);
-    gmb.memory.write_byte(0xfffe, 0x34);
-    gmb.memory.write_byte(0xffff, 0x12);
+    gmb.memory.write_byte(0xfffe, 0x12);
+    gmb.memory.write_byte(0xffff, 0x34);
     gmb.cpu.set_flag("z", true);
     assert_eq!(gmb.cycle(), 8);
     assert_eq!(gmb.cpu.get_pc(), 0x0102);
 
     let mut gmb = super::get_test_gmb(0xc0);
     gmb.cpu.set_sp(0xfffe);
-    gmb.memory.write_byte(0xfffe, 0x34);
-    gmb.memory.write_byte(0xffff, 0x12);
+    gmb.memory.write_byte(0xfffe, 0x12);
+    gmb.memory.write_byte(0xffff, 0x34);
     gmb.cpu.set_flag("z", false);
     assert_eq!(gmb.cycle(), 20);
     assert_eq!(gmb.cpu.get_pc(), 0x1234);
@@ -182,8 +182,8 @@ fn test_ret_cc() {
 fn test_reti() {
     let mut gmb = super::get_test_gmb(0xd9);
     gmb.cpu.set_sp(0xfffe);
-    gmb.memory.write_byte(0xfffe, 0x34);
-    gmb.memory.write_byte(0xffff, 0x12);
+    gmb.memory.write_byte(0xfffe, 0x12);
+    gmb.memory.write_byte(0xffff, 0x34);
     gmb.cpu.clear_ime();
     assert_eq!(gmb.cycle(), 16);
     assert_eq!(gmb.cpu.get_pc(), 0x1234);
@@ -192,8 +192,8 @@ fn test_reti() {
 
     let mut gmb = super::get_test_gmb(0xd9);
     gmb.cpu.set_sp(0xfffe);
-    gmb.memory.write_byte(0xfffe, 0x34);
-    gmb.memory.write_byte(0xffff, 0x12);
+    gmb.memory.write_byte(0xfffe, 0x12);
+    gmb.memory.write_byte(0xffff, 0x34);
     gmb.cpu.set_ime();
     assert_eq!(gmb.cycle(), 16);
     assert_eq!(gmb.cpu.get_pc(), 0x1234);
