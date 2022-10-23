@@ -31,7 +31,7 @@ fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        let scaled_size = LogicalSize::new(WIDTH as f64 * 3.0, HEIGHT as f64 * 3.0);
+        let scaled_size = LogicalSize::new(WIDTH as f64 * 5.0, HEIGHT as f64 * 5.0);
         WindowBuilder::new()
             .with_title("GameBoy emulator")
             .with_inner_size(scaled_size)
@@ -47,8 +47,7 @@ fn main() -> Result<(), Error> {
     };
     
     let mut gmb = GMB::new();
-    gmb.init("resources/06-ld r,r.gb");
-    gmb.ppu.set_pixel_at(20, 20, 3);
+    gmb.init("resources/tetris.gb");
 
     let app = App {
         gmb,
@@ -58,18 +57,8 @@ fn main() -> Result<(), Error> {
 
     game_loop(event_loop, window, app, FPS as u32, 0.5, move |g| {
         // update
-        g.game.gmb.cycle();
-        //println!("{}", g.game.gmb.cpu_debug());
-        //g.game.gmb.memory._dump_vram_1();
-        //g.game.gmb.memory._dump_oam();
+        g.game.gmb._cycle(g.game.pixels.get_frame());
     }, move |g| {
-        // draw
-        if g.game.gmb.ppu.is_updated() && !g.game.paused {
-            g.game.gmb.read_tile();
-            g.game.gmb.ppu.draw(g.game.pixels.get_frame());
-            g.game.gmb.ppu.reset_updated();
-        }
-        //println!("{}", g.game.gmb.cpu_debug());
         if let Err(e) = g.game.pixels.render() {
             println!("pixels.render() failed: {}", e);
             g.exit();
@@ -90,7 +79,6 @@ fn main() -> Result<(), Error> {
                 event: WindowEvent::KeyboardInput { device_id: _, input, is_synthetic: _ } 
             } => {
                 println!("Keyboard input!: {:?}", input);
-                g.game.gmb.read_tile()
             },
             _ => {}
         }
