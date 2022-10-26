@@ -1,6 +1,5 @@
-pub mod gmb;
-
 use std::time::Duration;
+use gameboy::gameboy::GameBoy;
 
 use pixels:: {
     Error,
@@ -13,17 +12,15 @@ use game_loop::winit::event::{Event, WindowEvent};
 use game_loop::winit::event_loop::EventLoop;
 use game_loop::winit::window::WindowBuilder;
 
-use gmb::GMB;
-
 use winit::dpi::LogicalSize;
 
 struct App {
-    gmb: GMB,
+    gameboy: GameBoy,
     pixels: Pixels,
     paused: bool,
 }
 
-const FPS: u64 = 4_194_304;
+const FPS: u64 = 4_000_000;
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
 
@@ -46,18 +43,17 @@ fn main() -> Result<(), Error> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
     
-    let mut gmb = GMB::new();
-    gmb.init("resources/tetris.gb");
-
+    
     let app = App {
-        gmb,
+        gameboy: GameBoy::new(),
         pixels,
         paused: false,
     };
 
     game_loop(event_loop, window, app, FPS as u32, 0.5, move |g| {
-        // update
-        g.game.gmb._cycle(g.game.pixels.get_frame());
+
+        g.game.gameboy.cycle(g.game.pixels.get_frame());
+
     }, move |g| {
         if let Err(e) = g.game.pixels.render() {
             println!("pixels.render() failed: {}", e);
