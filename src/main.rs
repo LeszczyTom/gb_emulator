@@ -6,7 +6,7 @@ use pixels:: {
     SurfaceTexture,
 };
 
-use game_loop::{game_loop, Time, TimeTrait};
+use game_loop::game_loop;
 use game_loop::winit::event::{Event, WindowEvent};
 use game_loop::winit::event_loop::EventLoop;
 use game_loop::winit::window::WindowBuilder;
@@ -16,7 +16,7 @@ use winit::dpi::LogicalSize;
 struct App {
     gameboy: GameBoy,
     pixels: Pixels,
-    paused: bool,
+    _paused: bool,
 }
 
 const FPS: u32 = 240;
@@ -46,7 +46,7 @@ fn main() -> Result<(), Error> {
     let app = App {
         gameboy: GameBoy::new(),
         pixels,
-        paused: false,
+        _paused: false,
     };
 
     game_loop(event_loop, window, app, FPS, 0.1, move |g| {
