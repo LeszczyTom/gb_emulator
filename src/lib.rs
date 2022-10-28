@@ -5,6 +5,9 @@ pub mod gameboy {
 
     const WIDTH: u16 = 160;
     const _HEIGHT: u16 = 144;
+    const CLOCK_SPEED: u32 = 4_194_304;
+    const SPEED: u32 = 1;
+
     pub struct GameBoy {
         cpu: cpu::Cpu,
         ppu: ppu::Ppu,
@@ -20,9 +23,15 @@ pub mod gameboy {
             }
         }
 
-        pub fn cycle(&mut self, frame: &mut [u8]) {
-            self.ppu.cycle(frame, &mut self.memory);
-            self.cpu.cycle(&mut self.memory);
+        pub fn cycle(&mut self, frame: &mut [u8], fps: u32) {
+            let mut cycles = 0;
+            for _ in 0..(CLOCK_SPEED / fps) * SPEED {
+                cycles -= 1;
+                if cycles == 0 {
+                    cycles = self.cpu.cycle(&mut self.memory);
+                }
+                self.ppu.cycle(frame, &mut self.memory);
+            }
         }
     }
 }

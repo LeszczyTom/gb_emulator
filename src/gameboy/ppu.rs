@@ -1,8 +1,5 @@
 use std::collections::VecDeque;
-
-use super::memory::Memory;
-
-
+use crate::gameboy::memory::Memory;
 
 #[derive(Debug)]
 enum Mode {
