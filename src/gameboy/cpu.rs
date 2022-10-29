@@ -64,7 +64,7 @@ pub struct Cpu {
     l: u8,
     sp: u16,
     pc: u16,
-    _ime: bool,
+    ime: bool,
     halt: bool,
 }
 
@@ -81,7 +81,7 @@ impl Cpu {
             f: 0,
             pc: 0,
             sp: 0,
-            _ime: false,
+            ime: false,
             halt: false,
         }
     }
@@ -96,7 +96,7 @@ impl Cpu {
     pub fn set_f(&mut self, value: u8) { self.f = value; }
     pub fn set_pc(&mut self, value: u16) { self.pc = value; }
     pub fn set_sp(&mut self, value: u16) { self.sp = value; }
-    pub fn set_ime(&mut self, value: bool) { self._ime = value; }
+    pub fn set_ime(&mut self, value: bool) { self.ime = value; }
 
     pub fn get_a(&self) -> u8 { self.a }
     pub fn get_b(&self) -> u8 { self.b }
@@ -112,7 +112,7 @@ impl Cpu {
     pub fn get_hl(&self) -> u16 { self.get_rr(HL) }
     pub fn get_pc(&self) -> u16 { self.pc }
     pub fn get_sp(&self) -> u16 { self.sp }
-    pub fn get_ime(&self) -> bool { self._ime }
+    pub fn get_ime(&self) -> bool { self.ime }
 
     pub fn get_r(&self, r: Register) -> u8 {
         match r {
@@ -206,6 +206,10 @@ impl Cpu {
         }
     }
 
+    pub fn get_halt(&self) -> bool {
+        self.halt
+    }
+
     fn read_n(&mut self, memory: &mut Memory) -> u8 {
         let value = memory.read_byte(self.pc);
         self.pc = self.pc.wrapping_add(1);
@@ -224,11 +228,7 @@ impl Cpu {
         opcode
     }
 
-    pub fn cycle(&mut self, memory: &mut Memory) -> u8{
-        if self.halt {
-            return 0;
-        }
-       
+    pub fn cycle(&mut self, memory: &mut Memory) -> u8 {
         let opcode =self.fetch_opcode(memory);
         self.exectute(opcode, memory)
     }
@@ -245,7 +245,7 @@ impl Cpu {
             0x07 => rlca(self),
             0x08 => ld_nn_sp(self, memory),
             0x09 => add_hl_rr(BC, self),
-            0xa => ld_a_bc(self, memory),
+            0x0a => ld_a_bc(self, memory),
             0x0b => dec_rr(BC, self),
             0x0c => inc_r(C, self),
             0x0d => dec_r(C, self),
@@ -264,6 +264,7 @@ impl Cpu {
             0x19 => add_hl_rr(DE, self),
             0x1a => ld_a_de(self, memory),
             0x1b => dec_rr(DE, self),
+            0x1c => inc_r(E, self),
             0x1d => dec_r(E, self),
             0x1e => ld_r_n(E, self, memory),
             0x1f => rra(self),
@@ -291,12 +292,16 @@ impl Cpu {
             0x33 => inc_rr(SP, self),
             0x34 => inc_hl(self, memory),
             0x35 => dec_hl(self, memory),
-
+            0x36 => ld_hl_n(self, memory),
+            0x37 => scf(self),
+            0x38 => jr_cc_n(Carry, self, memory),
             0x39 => add_hl_rr(SP, self),
+            0x3a => ld_a_hld(self, memory),
             0x3b => dec_rr(SP, self),
             0x3c => inc_r(A, self),
             0x3d => dec_r(A, self),
             0x3e => ld_r_n(A, self, memory),
+            0x3f => ccf(self),
 
             0x40 => ld_r_r(B, B, self),
             0x41 => ld_r_r(B, C, self),
@@ -329,6 +334,7 @@ impl Cpu {
             0x5b => ld_r_r(E, E, self),
             0x5c => ld_r_r(E, H, self),
             0x5d => ld_r_r(E, L, self),
+            0x5e => ld_r_hl(E, self, memory),
             0x5f => ld_r_r(E, A, self),
 
             0x60 => ld_r_r(H, B, self),
@@ -348,14 +354,31 @@ impl Cpu {
             0x6e => ld_r_hl(L, self, memory),
             0x6f => ld_r_r(L, A, self),
 
-            0x77 => ld_rr_nn(HL, self, memory),
+            0x70 => ld_hl_r(B, self, memory),
+            0x71 => ld_hl_r(C, self, memory),
+            0x72 => ld_hl_r(D, self, memory),
+            0x73 => ld_hl_r(E, self, memory),
+            0x74 => ld_hl_r(H, self, memory),
+            0x75 => ld_hl_r(L, self, memory),
+            0x76 => halt(self),
+            0x77 => ld_hl_r(A, self, memory),
             0x78 => ld_r_r(A, B, self),
+            0x79 => ld_r_r(A, C, self),
+            0x7a => ld_r_r(A, D, self),
             0x7b => ld_r_r(A, E, self), 
             0x7c => ld_r_r(A, H, self),
             0x7d => ld_r_r(A, L, self),
+            0x7e => ld_r_hl(A, self, memory),
+            0x7f => ld_r_r(A, A, self),
 
             0x80 => add_a_r(B, self),
+            0x81 => add_a_r(C, self),
+            0x82 => add_a_r(D, self),
+            0x83 => add_a_r(E, self),
+            0x84 => add_a_r(H, self),
+            0x85 => add_a_r(L, self),
             0x86 => add_a_hl(self, memory),
+            0x87 => add_a_r(A, self),
             0x88 => adc_r(B, self),
             0x89 => adc_r(C, self),
             0x8a => adc_r(D, self),
@@ -366,9 +389,30 @@ impl Cpu {
             0x8f => adc_r(A, self),
 
             0x90 => sub_r(B, self),
+            0x91 => sub_r(C, self),
+            0x92 => sub_r(D, self),
             0x93 => sub_r(E, self),
+            0x94 => sub_r(H, self),
+            0x95 => sub_r(L, self),
             0x96 => sub_hl(self, memory),
+            0x97 => sub_r(A, self),
+            0x98 => sbc_r(B, self),
+            0x99 => sbc_r(C, self),
+            0x9a => sbc_r(D, self),
+            0x9b => sbc_r(E, self),
+            0x9c => sbc_r(H, self),
+            0x9d => sbc_r(L, self),
+            0x9e => sbc_hl(self, memory),
+            0x9f => sbc_r(A, self),
 
+            0xa0 => and_r(B, self),
+            0xa1 => and_r(C, self),
+            0xa2 => and_r(D, self),
+            0xa3 => and_r(E, self),
+            0xa4 => and_r(H, self),
+            0xa5 => and_r(L, self),
+            0xa6 => and_hl(self, memory),
+            0xa7 => and_r(A, self),
             0xa8 => xor_r(B, self),
             0xa9 => xor_r(C, self),
             0xaa => xor_r(D, self),
@@ -378,6 +422,14 @@ impl Cpu {
             0xae => xor_hl(self, memory),
             0xaf => xor_r(A, self),
            
+            0xb0 => or_r(B, self),
+            0xb1 => or_r(C, self),
+            0xb2 => or_r(D, self),
+            0xb3 => or_r(E, self),
+            0xb4 => or_r(H, self),
+            0xb5 => or_r(L, self),
+            0xb6 => or_hl(self, memory),
+            0xb7 => or_r(A, self),
             0xb8 => cp_r(B, self),
             0xb9 => cp_r(C, self),
             0xba => cp_r(D, self),
@@ -387,31 +439,96 @@ impl Cpu {
             0xbe => cp_hl(self, memory),
             0xbf => cp_r(A, self),
 
+            0xc0 => ret_cc(NZero, self, memory),
             0xc1 => pop_rr(BC, self, memory),
+            0xc2 => jp_cc_nn(NZero, self, memory),
+            0xc3 => jp_nn(self, memory),
+            0xc4 => call_cc_nn(NZero, self, memory),
             0xc5 => push_rr(BC, self, memory),
+            0xc6 => add_a_n(self, memory),
+            0xc7 => rst(0x00, self, memory),
+            0xc8 => ret_cc(Zero, self, memory),
             0xc9 => ret(self, memory),
+            0xca => jp_cc_nn(Zero, self, memory),
             0xcb => self.cb_prefix(memory),
+            0xcc => call_cc_nn(Zero, self, memory),
             0xcd => call_nn(self, memory),
             0xce => adc_n(self, memory),
+            0xcf => rst(0x08, self, memory),
 
+            0xd0 => ret_cc(NCarry, self, memory),
+            0xd1 => pop_rr(DE, self, memory),
+            0xd2 => jp_cc_nn(NCarry, self, memory),
+            0xd3 => panic!("Not valid opcode"),
+            0xd4 => call_cc_nn(NCarry, self, memory), 
+            0xd5 => push_rr(DE, self, memory),
             0xd6 => sub_n(self, memory),
+            0xd7 => rst(0x10, self, memory),
+            0xd8 => ret_cc(Carry, self, memory),
+            0xd9 => reti(self, memory),
+            0xda => jp_cc_nn(Carry, self, memory),
+            0xdb => panic!("Not valid opcode"),
+            0xdc => call_cc_nn(Carry, self, memory),
+            0xdd => panic!("Not valid opcode"),
+            0xde => sbc_n(self, memory),
+            0xdf => rst(0x18, self, memory),
 
             0xe0 => ldh_n_a(self, memory),
+            0xe1 => pop_rr(HL, self, memory),
             0xe2 => ld_c_a(self, memory),
+            0xe3 => panic!("Not valid opcode"),
+            0xe4 => panic!("Not valid opcode"),
+            0xe5 => push_rr(HL, self, memory),
+            0xe6 => and_n(self, memory),
+            0xe7 => rst(0x20, self, memory),
+            0xe8 => add_sp_n(self, memory),
+            0xe9 => jp_hl(self),
             0xea => ld_nn_a(self, memory),
+            0xeb => panic!("Not valid opcode"),
+            0xec => panic!("Not valid opcode"),
+            0xed => panic!("Not valid opcode"),
             0xee => xor_n(self, memory),
+            0xef => rst(0x28, self, memory),
 
             0xf0 => ldh_a_n(self, memory),
+            0xf1 => pop_rr(AF, self, memory),
+            0xf2 => ld_a_c(self, memory),
+            0xf3 => di(self),
+            0xf4 => panic!("Not valid opcode"),
+            0xf5 => push_rr(AF, self, memory),
+            0xf6 => or_n(self, memory),
+            0xf7 => rst(0x30, self, memory),
+            0xf8 => ldhl_sp_n(self, memory),
+            0xf9 => ld_sp_hl(self),
+            0xfa => ld_a_nn(self, memory),
             0xfb => ei(self),
+            0xfc => panic!("Not valid opcode"),
+            0xfd => panic!("Not valid opcode"),
             0xfe => cp_n(self, memory),
-
-            _ => panic!("Opcode {:02x} not implemented", opcode),
+            0xff => rst(0x38, self, memory),
         }
     }
 
     fn cb_prefix(&mut self, memory: &mut Memory) -> u8 {
         let opcode = self.fetch_opcode(memory);
         match opcode {
+            0x00 => rlc_r(B, self),
+            0x01 => rlc_r(C, self),
+            0x02 => rlc_r(D, self),
+            0x03 => rlc_r(E, self),
+            0x04 => rlc_r(H, self),
+            0x05 => rlc_r(L, self),
+            0x06 => rlc_hl(self, memory),
+            0x07 => rlc_r(A, self),
+            0x08 => rrc_r(B, self),
+            0x09 => rrc_r(C, self),
+            0x0a => rrc_r(D, self),
+            0x0b => rrc_r(E, self),
+            0x0c => rrc_r(H, self),
+            0x0d => rrc_r(L, self),
+            0x0e => rrc_hl(self, memory),
+            0x0f => rrc_r(A, self),
+
             0x10 => rl_r(B, self),
             0x11 => rl_r(C, self),
             0x12 => rl_r(D, self),
@@ -420,6 +537,14 @@ impl Cpu {
             0x15 => rl_r(L, self),
             0x16 => rl_hl(self, memory),
             0x17 => rl_r(A, self),
+            0x18 => rr_r(B, self),
+            0x19 => rr_r(C, self),
+            0x1a => rr_r(D, self),
+            0x1b => rr_r(E, self),
+            0x1c => rr_r(H, self),
+            0x1d => rr_r(L, self),
+            0x1e => rr_hl(self, memory),
+            0x1f => rr_r(A, self),
 
             0x40 => bit_r(B, 0, self),
             0x41 => bit_r(C, 0, self),

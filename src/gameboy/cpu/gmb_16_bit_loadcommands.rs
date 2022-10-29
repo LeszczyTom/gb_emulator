@@ -1,5 +1,6 @@
 use crate::gameboy::{ cpu::Cpu, memory::Memory };
 use crate::gameboy::cpu::RegisterPair;
+use crate::gameboy::cpu::Flag::*;
 
 /// Loads 2 bytes of immediate data to register pair rr.
 /// 
@@ -90,4 +91,47 @@ pub fn ld_nn_sp(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     memory.write_byte(nn, cpu.sp as u8);
     memory.write_byte(nn.wrapping_add(1), (cpu.sp >> 8) as u8);
     20
+}
+
+/// The 8-bit operand e is added to SP and the result is stored in HL
+/// ```rust
+/// //Example: When SP = 0xFFF8,
+/// //LDHL SP, 2 ; HL <- 0xFFFA, Z <- 0,  N <- 0, H <- 0, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xf8);
+/// # memory.write_byte(0x01, 0x02);
+/// # cpu.set_sp(0xfff8);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_hl(), 0xfffa);
+/// assert_eq!(cpu.get_f(), 0);
+/// 
+/// //Example: When SP = 0xFFFF,
+/// //LDHL SP, 2 ; HL <- 0x1, Z <- 0,  N <- 0, H <- 0, CY <- 1
+/// # cpu.set_sp(0xffff);
+/// # memory.write_byte(0x02, 0xf8);
+/// # memory.write_byte(0x03, 0x02);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_hl(), 0x1);
+/// //assert_eq!(cpu.get_f(), 0x10);
+/// ```
+pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 { //TODO fix flags
+    let n = cpu.read_n(memory) as u16;
+    let sp = cpu.sp;
+    let result = cpu.sp.wrapping_add(n);
+    cpu.set_rr(RegisterPair::HL, result);
+
+    cpu.set_flag(Zero, false);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, (sp & 0xfff).wrapping_add(n & 0xfff) > 0xfff);
+    cpu.set_flag(Carry, (sp).overflowing_add(n).1 == true);
+    
+    12
+}
+
+/// Load the contents of register pair HL in stack pointer SP.
+pub fn ld_sp_hl(cpu: &mut Cpu) -> u8 {
+    cpu.sp = cpu.get_hl();
+    8
 }

@@ -166,3 +166,184 @@ pub fn rrca(cpu: &mut Cpu) -> u8 {
     cpu.a = result;
     4
 }
+
+/// Rotates the contents of operand m to the left, r and (HL) are used for operand m.
+fn rlc_m(value: u8, cpu: &mut Cpu) -> u8 {
+    let result = value.rotate_left(1);
+
+    cpu.set_flag(Zero, result == 0);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, value >> 7 == 1);
+
+    result
+}
+
+/// Rotates the contents of register r to the left.
+/// ```rust
+/// //Examples: When B = 0x85, and CY = 0,
+/// //RLC B ; B <- 0x0b, Z <- 0, N <- 0, H <- 0, CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xcb);
+/// # memory.write_byte(0x01, 0x00);
+/// # cpu.set_b(0x85);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_b(), 0x0b);
+/// assert_eq!(cpu.get_f(), 0x10);
+/// ```
+pub fn rlc_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r.clone());
+    let result = rlc_m(value, cpu);
+    cpu.set_r(r, result);
+
+    8
+}
+
+/// Rotates the contents of (HL) to the left.
+/// ```rust
+/// //Examples: When (HL) = 0, and CY = 0,
+/// //RLC (HL) ; (HL) <- 0x00, Z <- 1 , N <- 0, H <- 0, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xcb);
+/// # memory.write_byte(0x01, 0x06);
+/// # memory.write_byte(0xff00, 0x00);
+/// # cpu.set_h(0xff);
+/// # cpu.set_l(0x00);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0xff00), 0x00);
+/// assert_eq!(cpu.get_f(), 0x80);
+/// ```
+pub fn rlc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_hl());
+    let result = rlc_m(value, cpu);
+    memory.write_byte(cpu.get_hl(), result);
+
+    16
+}
+
+/// Rotates the contents of operand m to the right, r and (HL) are used for operand m.
+fn rrc_m(value: u8, cpu: &mut Cpu) -> u8 {
+    let result = value.rotate_right(1);
+
+    cpu.set_flag(Zero, result == 0);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, value & 0x01 == 1);
+
+    result
+}
+
+/// Rotates the contents of register r to the right.
+/// ```rust
+/// //Examples: When C = 1, CY = 0,
+/// //RRC C ; C <- 0x80, Z <- 0, N <- 0, H <- 0, CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xcb);
+/// # memory.write_byte(0x01, 0x09);
+/// # cpu.set_c(1);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_c(), 0x80);
+/// assert_eq!(cpu.get_f(), 0x10);
+/// ```
+pub fn rrc_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r.clone());
+    let result = rrc_m(value, cpu);
+    cpu.set_r(r, result);
+
+    8
+}
+
+/// Rotates the contents of (HL) to the right.
+/// ```rust
+/// //Examples: When (HL) = 0, CY = 0,
+/// //RRC (HL) ; (HL) <- 0, Z <- 1, N <- 0, H <- 0, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xcb);
+/// # memory.write_byte(0x01, 0x0e);
+/// # memory.write_byte(0xff00, 0x00);
+/// # cpu.set_h(0xff);
+/// # cpu.set_l(0x00);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0xff00), 0x00);
+/// assert_eq!(cpu.get_f(), 0x80);
+/// ```
+pub fn rrc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_hl());
+    let result = rrc_m(value, cpu);
+    memory.write_byte(cpu.get_hl(), result);
+
+    16
+}
+
+/// Rotates the contents of operand m to the right, r and (HL) are used for operand m.
+fn rr_m(value: u8, cpu: &mut Cpu) -> u8 {
+    let carry = cpu.get_flag(Carry) as u8;
+    let result = (value >> 1) | (carry << 7);
+
+    cpu.set_flag(Zero, result == 0);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, value & 0x01 == 1);
+
+    result
+}
+
+/// Rotates the contents of register r to the right.
+/// ```rust
+/// //Examples: When A = 1, CY = 0,
+/// //RR A ; A <- 0, Z <- 1, N <- 0, H 0, CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xcb);
+/// # memory.write_byte(0x01, 0x1f);
+/// # cpu.set_a(1);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x00);
+/// assert_eq!(cpu.get_f(), 0x90);  
+/// ```
+pub fn rr_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r.clone());
+    let result = rr_m(value, cpu);
+    cpu.set_r(r, result);
+
+    8
+}
+
+/// Rotates the contents of (HL) to the right.
+/// ```rust
+/// //Examples: When (hl) = 0x8a, CY = 0,
+/// //RR (HL) ; (HL) <- 45h, Z <- 0, N <- 0, H w- 0, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xcb);
+/// # memory.write_byte(0x01, 0x1e);
+/// # memory.write_byte(0xff00, 0x8a);
+/// # cpu.set_h(0xff);
+/// # cpu.set_l(0x00);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0xff00), 0x45);
+/// assert_eq!(cpu.get_f(), 0x00);
+/// ```
+pub fn rr_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_hl());
+    let result = rr_m(value, cpu);
+    memory.write_byte(cpu.get_hl(), result);
+
+    16
+}

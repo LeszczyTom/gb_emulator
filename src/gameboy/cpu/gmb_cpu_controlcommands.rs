@@ -13,7 +13,7 @@ use crate::gameboy::cpu::Flag::*;
 /// assert_eq!(cpu.get_ime(), true);
 /// ```
 pub fn ei(cpu: &mut Cpu) -> u8 {
-    cpu._ime = true;
+    cpu.ime = true;
     4
 }
 
@@ -77,5 +77,49 @@ pub fn daa(cpu: &mut Cpu) -> u8 {
     cpu.set_flag(Zero, cpu.a == 0);
     cpu.set_flag(HalfCarry, false);
     cpu.set_flag(Carry, c);
+    4
+}
+
+/// Sets the carry flag CY.
+pub fn scf(cpu: &mut Cpu) -> u8 {
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, true);
+    4
+}
+
+/// Flips the carry flag CY.
+/// ``` rust
+/// //Example: When CY = 1,
+/// //CCF ; CY 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # use gameboy::gameboy::cpu::Flag::Carry;
+/// # memory.set_bios_enabled(false);
+/// # cpu.set_flag(Carry, true);
+/// # memory.write_byte(0x00, 0x3f);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_flag(Carry), false);
+/// ```
+pub fn ccf(cpu: &mut Cpu) -> u8 {
+    let carry = cpu.get_flag(Carry);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, !carry);
+    4
+}
+
+/// After a HALT instruction is executed, the system clock is stopped and HALT mode is entered. 
+/// Although the system clock is stopped in this status, the oscillator circuit and LCD controller continue to operate.
+pub fn halt(cpu: &mut Cpu) -> u8 {
+    cpu.halt = true;
+    4
+
+    //TODO: HALT mode is canceled by an interrupt or reset signal.
+}
+
+/// Resets the interrupt master enable flag and prohibits maskable interrupts.
+pub fn di(cpu: &mut Cpu) -> u8 {
+    cpu.ime = false;
     4
 }

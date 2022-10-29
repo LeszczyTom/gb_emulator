@@ -26,10 +26,16 @@ pub mod gameboy {
         pub fn cycle(&mut self, frame: &mut [u8], fps: u32) {
             let mut cycles = 0;
             for _ in 0..(CLOCK_SPEED / fps) * SPEED {
+                if self.cpu.get_halt() {
+                    continue;
+                }
+                
                 cycles -= 1;
+
                 if cycles == 0 {
                     cycles = self.cpu.cycle(&mut self.memory);
                 }
+
                 self.ppu.cycle(frame, &mut self.memory);
             }
         }

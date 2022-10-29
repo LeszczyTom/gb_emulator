@@ -253,3 +253,110 @@ pub fn ldh_a_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
     12
 }
+
+/// Loads 8-bit immediate data n into memory specified by register pair HL.
+/// ```rust
+/// //Example: When HL = 0x8AC5,
+/// //LD (HL), 0 ; 0x8AC5 <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x36);
+/// # memory.write_byte(0x01, 0x00);
+/// # cpu.set_h(0x8a);
+/// # cpu.set_l(0xc5);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0x8ac5), 0x00);
+/// ```
+pub fn ld_hl_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let addr = cpu.get_rr(HL);
+    let value = cpu.read_n(memory);
+    memory.write_byte(addr, value);
+
+    12
+}
+
+/// Loads in register A the contents of memory specified by the contents of register pair HL and simultaneously decrements the contents of HL.
+/// ```rust
+/// //Example: When HL = 0x8A5C and (0x8A5C) = 0x3C,
+/// //LD A, (HLD) ; A <- 0x3C, HL <- 0x8A5B
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x3a);
+/// # cpu.set_h(0x8a);
+/// # cpu.set_l(0x5c);
+/// # memory.write_byte(0x8a5c, 0x3c);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x3c);
+/// assert_eq!(cpu.get_hl(), 0x8a5b);
+/// ```
+pub fn ld_a_hld(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let hl = cpu.get_rr(HL);
+    cpu.a = memory.read_byte(hl);
+    cpu.set_rr(HL, hl.wrapping_sub(1));
+
+    8
+}
+
+/// Stores the contents of register r in memory specified by register pair HL.
+/// ```rust
+/// //Example: When A = 0x3C, HL = 0x8AC5 
+/// //LD (HL), A ; (0x8AC5h) <- 0x3C
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x77);
+/// # cpu.set_a(0x3c);
+/// # cpu.set_h(0x8a);
+/// # cpu.set_l(0xc5);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0x8ac5), 0x3c);
+/// ```
+pub fn ld_hl_r(r: Register, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let addr = cpu.get_rr(HL);
+    let value = cpu.get_r(r);
+    memory.write_byte(addr, value);
+
+    8
+}
+
+/// Loads into register A the contents of the internal RAM, port register, or mode register at the address in the range FFOOh-FFFFh specified by register C.
+/// ``` rust
+/// //Example: When C = 0x95,
+/// //LD A, (C) ; A <- contents of (0xFF95)
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xf2);
+/// # cpu.set_c(0x95);
+/// # memory.write_byte(0xff95, 0x3c);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x3c);
+/// ```
+pub fn ld_a_c(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let addr = 0xff00 + u16::from(cpu.c);
+    cpu.a = memory.read_byte(addr);
+
+    8
+}
+
+/// Loads into register A the contents of the internal RAM or register specified by 16-bit immediate operand nn.
+/// ```rust
+/// //Example: LD A, (0xFF44) ; (0xFF44) = 0x1a
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xfa);
+/// # memory.write_byte(0x01, 0x44);
+/// # memory.write_byte(0x02, 0xff);
+/// # memory.write_byte(0xff44, 0x1a);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x1a);
+/// ```
+pub fn ld_a_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let addr = cpu.read_nn(memory);
+    cpu.a = memory.read_byte(addr);
+
+    16
+}

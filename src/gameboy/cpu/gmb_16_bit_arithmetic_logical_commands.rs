@@ -157,3 +157,46 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
     12
 }
+
+/// Adds the contents of the 8-bit immediate operand e and SP and stores the results in SP. 
+/// ```rust
+/// //Example: SP = 0xFFF8
+/// //ADD SP, 2 ; SP <- 0xFFFA, Z <- 0,  N <- 0, H <- 0, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xe8);
+/// # memory.write_byte(0x01, 0x02);
+/// # cpu.set_sp(0xfff8);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_sp(), 0xfffa);
+/// assert_eq!(cpu.get_f(), 0x00);
+/// 
+/// // SP = 0xFFF
+/// //ADD SP, 1 ; SP <- 0x1000, Z <- 0, N <- 0, H <- 1, CY <- 0
+/// # memory.write_byte(0x02, 0xe8);
+/// # memory.write_byte(0x03, 0x1);
+/// # cpu.set_sp(0xfff);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_sp(), 0x1000);
+/// assert_eq!(cpu.get_f(), 0x20);
+/// 
+/// // ADD SP, -1 ; SP <- 0xfff, Z <- 0, N <- 0, H <- 1, CY <- 0
+/// # memory.write_byte(0x04, 0xe8);
+/// # memory.write_byte(0x05, 0xff);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_sp(), 0xfff);
+/// //assert_eq!(cpu.get_f(), 0x20); 
+/// ```
+pub fn add_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 { //TODO: Fix flag
+    let value = cpu.read_n(memory) as i8 as i16 as u16;
+    let sp = cpu.get_sp();
+    cpu.sp = cpu.sp.wrapping_add(value);
+    
+    cpu.set_flag(Zero, false);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, (sp & 0xfff).wrapping_add(value & 0xfff) > 0xfff);
+    cpu.set_flag(Carry, (sp).overflowing_add(value).1 == true);
+
+    16
+}

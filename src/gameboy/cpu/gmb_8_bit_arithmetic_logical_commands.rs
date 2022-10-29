@@ -365,6 +365,27 @@ pub fn add_a_r(r: Register, cpu: &mut Cpu) -> u8 {
     4
 }
 
+/// Adds 8-bit immediate operand n to the contents of register A and stores the results in register A.
+/// ``` rust
+/// //Example: When A = 0x3C,
+/// //  ADD A, 0xFF ; A <- 0x3B, Z <- 0, N <- 0, H <- 1, CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xc6);
+/// # memory.write_byte(0x01, 0xff);
+/// # cpu.set_a(0x3c);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x3b);
+/// assert_eq!(cpu.get_f(), 0x30);
+/// ```
+pub fn add_a_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = cpu.read_n(memory);
+    add_s(value, cpu);
+
+    8
+}
+
 /// Loads in register A the contents of memory specified by the contents of register pair HL and simultaneously increments the contents of HL.
 /// ``` rust
 /// //Example: When HL = 0x1FF and (0x1FF) = 0x56,
@@ -385,6 +406,237 @@ pub fn ld_a_hli(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     cpu.set_a(value);
     cpu.set_rr(HL, cpu.get_rr(HL).wrapping_add(1));
+
+    8
+}
+
+fn sbc_s(value: u8, cpu: &mut Cpu) {
+    let carry = cpu.get_flag(Carry) as u8;
+    let result = cpu.a.wrapping_sub(value).wrapping_sub(carry);
+
+    cpu.set_flag(Zero, result == 0);
+    cpu.set_flag(Subtract, true);
+    cpu.set_flag(HalfCarry, (cpu.a & 0xf) < (value & 0xf) + carry);
+    cpu.set_flag(Carry, (cpu.a as u16) < (value as u16) + (carry as u16));
+
+    cpu.a = result;
+}
+
+/// Subtracts the contents of register r and CY from the contents of register A and stores the results in register A.
+/// ``` rust
+/// //Examples: When A = 0x3B, H = 0x2A, and CY = 1
+/// //SBC A, H ; A <- 1 0h, Z <- 0, N <- 1, H <- 0,CY <— 0 
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x9c);
+/// # cpu.set_f(0x10);
+/// # cpu.set_a(0x3b);
+/// # cpu.set_h(0x2a);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x10);
+/// assert_eq!(cpu.get_f(), 0x40);
+/// ```
+pub fn sbc_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r);
+    sbc_s(value, cpu);
+
+    4
+}
+
+/// Subtracts the contents of (HL) and CY from the contents of register A and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x3B, (HL) = 0x4F, and CY = 1
+/// //SBC A, (HL) ; A <- 0xEB, Z <- 0, N <- 1, H <- 1 , CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x9e);
+/// # cpu.set_f(0x10);
+/// # cpu.set_a(0x3b);
+/// # cpu.set_h(0x10);
+/// # cpu.set_l(0x00);
+/// # memory.write_byte(0x1000, 0x4f);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0xeb);
+/// assert_eq!(cpu.get_f(), 0x70);
+/// 
+pub fn sbc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_rr(HL));
+    sbc_s(value, cpu);
+
+    8
+}
+
+/// Subtracts the contents of n and CY from the contents of register A and stores the results in register A.
+/// ``` rust
+/// //Examples: When A = 0x3B, and CY = 1
+/// //SBC A, 0x3A ; A <- 0x00, Z <- 1 , N <- 1, H <- 0, CY <- 0 
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xde);
+/// # memory.write_byte(0x01, 0x3a);
+/// # cpu.set_f(0x10);
+/// # cpu.set_a(0x3b);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x00);
+/// assert_eq!(cpu.get_f(), 0xC0);
+/// ```
+pub fn sbc_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = cpu.read_n(memory);
+    sbc_s(value, cpu);
+
+    8
+}
+
+// Takes the logical-AND for each bit of the contents of operand s and register A, and stores the results in register A.
+// r, n, and (HL) are used for operand s.
+fn and_s(value: u8, cpu: &mut Cpu) {
+    cpu.a &= value;
+
+    cpu.set_flag(Zero, cpu.a == 0);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, true);
+    cpu.set_flag(Carry, false);
+}
+
+/// Takes the logical-AND for each bit of the contents of regiter r and register A, and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x5A, L = 0x3F
+/// //AND L ; A <- 0x1A, Z <- 0, N <- 0, H <- 1, CY <— 0 
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xa5);
+/// # cpu.set_a(0x5a);
+/// # cpu.set_l(0x3f);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x1a);
+/// assert_eq!(cpu.get_f(), 0x20);
+/// ```
+pub fn and_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r);
+    and_s(value, cpu);
+
+    4
+}
+
+/// Takes the logical-AND for each bit of the contents of n and register A, and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x5A
+/// //AND 0x38 ; A <- 0x18, Z <- 0, N <- 0, H <- 1, CY <- 0 
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xe6);
+/// # memory.write_byte(0x01, 0x38);
+/// # cpu.set_a(0x5a);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x18);
+/// assert_eq!(cpu.get_f(), 0x20);
+/// ```
+pub fn and_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = cpu.read_n(memory);
+    and_s(value, cpu);
+
+    8
+}
+
+/// Takes the logical-AND for each bit of the contents of n and register A, and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x5A, (HL) = 0x00
+/// //AND (HL) ; A <- 0x00, Z <- 1, N <- 0, H <- 1, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new(); 
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xa6);
+/// # cpu.set_a(0x5a);
+/// # cpu.set_h(0x10);
+/// # cpu.set_l(0x00);
+/// # memory.write_byte(0x1000, 0x00);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x00);
+/// assert_eq!(cpu.get_f(), 0xa0);
+/// ```
+pub fn and_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_rr(HL));
+    and_s(value, cpu);
+
+    8
+}
+
+/// Takes the logical-OR for each bit of the contents of operand s and register A and stores the results in register A.
+///  r, n, and (HL) are used for operand s.
+fn or_s(value: u8, cpu: &mut Cpu) {
+    cpu.a |= value;
+
+    cpu.set_flag(Zero, cpu.a == 0);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, false);
+}
+
+/// Takes the logical-OR for each bit of the contents of register r and register A and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x5A
+/// //OR A ; A <— 0x5A, Z <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xb7); 
+/// # cpu.set_a(0x5a);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x5a);
+/// assert_eq!(cpu.get_f(), 0x00);
+/// ```
+pub fn or_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r);
+    or_s(value, cpu);
+
+    4
+}
+
+/// Takes the logical-OR for each bit of the contents of n and register A and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x5A
+/// //OR 0x03 ; A <- 0x5B, Z <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xf6);
+/// # memory.write_byte(0x01, 0x03);
+/// # cpu.set_a(0x5a);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x5b);
+/// assert_eq!(cpu.get_f(), 0x00);
+/// ```
+pub fn or_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = cpu.read_n(memory);
+    or_s(value, cpu);
+
+    8
+}
+
+/// Takes the logical-OR for each bit of the contents of n and register A and stores the results in register A.
+/// ```rust
+/// //Examples: When A = 0x5A, (HL) = 0x0f
+/// //OR (HL) ; A <- 0x5F, Z <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0xb6);
+/// # cpu.set_a(0x5a);
+/// # cpu.set_h(0x10);
+/// # cpu.set_l(0x00);
+/// # memory.write_byte(0x1000, 0x0f);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x5f);
+/// assert_eq!(cpu.get_f(), 0x00);
+/// ```
+pub fn or_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_rr(HL));
+    or_s(value, cpu);
 
     8
 }
