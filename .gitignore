@@ -1,4 +1,4 @@
 /target
 /resources
 /dist
-.Cargo.lock
+Cargo.lock
