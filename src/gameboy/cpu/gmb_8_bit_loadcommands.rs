@@ -8,6 +8,7 @@ use crate::gameboy::cpu::RegisterPair::{ HL, DE };
 /// //LD (HLD), A ; (0x4000) <- 0x05, HL = 0x3FFF
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x32);
 /// # cpu.set_a(0x05);
 /// # cpu.set_h(0x40);
@@ -29,6 +30,7 @@ pub fn ld_hld_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: LD B, 0x24 ; B <- 0x24
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x06);
 /// # memory.write_byte(0x01, 0x24);
 /// cpu.cycle(&mut memory);
@@ -46,6 +48,7 @@ pub fn ld_r_n(r: Register, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //LD (C), A ; (0xFF9F) <- A
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xe2);
 /// # cpu.set_c(0x9f);
 /// # cpu.set_a(0x24);
@@ -63,6 +66,7 @@ pub fn ld_c_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// // LD (DE) , A ; (0x205) <- 0xOO
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x12);
 /// # cpu.set_d(0x02);
 /// # cpu.set_e(0x05);
@@ -70,7 +74,7 @@ pub fn ld_c_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(memory.read_byte(0x205), 0x00);
 /// ```
-pub fn _ld_de_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn ld_de_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     memory.write_byte(cpu.get_rr(DE), cpu.a);
     8
 }
@@ -81,6 +85,7 @@ pub fn _ld_de_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //LDH (d8), A ; (0xFF12) <- A
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xe0);
 /// # memory.write_byte(0x01, 0x12);
 /// # cpu.set_a(0x34);
@@ -100,6 +105,7 @@ pub fn ldh_n_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //LD A, (DE) ; A <- 0x5F
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x1a);
 /// # cpu.set_d(0x01);
 /// # cpu.set_e(0x00);
@@ -118,13 +124,14 @@ pub fn ld_a_de(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //LD A, B ; A <- B
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x78);
 /// # cpu.set_b(0x5f);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_a(), 0x5f);
 ///
 /// // LD B, D ; B <- D
-/// memory.write_byte(0x01, 0x58);
+/// memory.write_byte(0x01, 0x42);
 /// cpu.set_d(0x12);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_b(), 0x12);
@@ -134,12 +141,32 @@ pub fn ld_r_r(r1: Register, r2: Register, cpu: &mut Cpu) -> u8 {
     4
 }
 
+/// Loads the contents of memory (8 bits) specified by register pair HL into register r.
+/// ```rust
+/// //Example: When (HL) = 0x5C,
+/// //LD H, (HL) ; H <- 0x5C
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x66);
+/// # cpu.set_h(0x10);
+/// # cpu.set_l(0x00);
+/// # memory.write_byte(0x1000, 0x5c);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_h(), 0x5c);
+/// ```
+pub fn ld_r_hl(r: Register, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    cpu.set_r(r, memory.read_byte(cpu.get_rr(HL)));
+    8
+}
+
 /// Stores the contents of register A in the memory specified by register pair HL and simultaneously increments the contents of HL.
 /// ```rust
 /// //Example: When HL = 0xFFFF and A = 0x56,
 /// //LD (HLI), A ; (0xFFFF) <- 0x56, HL = 0x0000
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x22);
 /// # cpu.set_h(0xff);
 /// # cpu.set_l(0xff);
@@ -161,6 +188,7 @@ pub fn ld_hli_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: LD (0xFF44), A ; (LY) <- A
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xea);
 /// # memory.write_byte(0x01, 0x44);
 /// # memory.write_byte(0x02, 0xff);

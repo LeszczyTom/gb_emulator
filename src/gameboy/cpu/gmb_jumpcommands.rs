@@ -8,6 +8,7 @@ use crate::gameboy::cpu::Flag;
 /// //JR NZ, 0x05 ; PC <- PC + 0x05
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x20);
 /// # memory.write_byte(0x01, 0x05);
 /// # cpu.set_f(0);
@@ -51,6 +52,7 @@ pub fn jr_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //CALL 0x1234; (0xFFDH) <- 0x80, (0xFFCH) <- 0x03, SP <- 0xFFCH, PC <- 0x1234
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x8000, 0xcd);
 /// # cpu.set_pc(0x8000);
 /// # cpu.set_sp(0xfffe);
@@ -76,6 +78,7 @@ pub fn call_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //RET ; Returns to address 0x8003
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x8000, 0xcd);
 /// # memory.write_byte(0x8001, 0x00);
 /// # memory.write_byte(0x8002, 0x90);

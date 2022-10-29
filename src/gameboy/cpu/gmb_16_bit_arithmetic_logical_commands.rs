@@ -8,6 +8,7 @@ use crate::gameboy::cpu::Flag::*;
 /// //INC DE ; DE <- 0x2360
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x13);
 /// # cpu.set_d(0x23);
 /// # cpu.set_e(0x5f);
@@ -27,6 +28,7 @@ pub fn inc_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// //DEC B ; B <- 0, Z <- 1, N <— 1 H <- 0,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x05);
 /// # cpu.set_b(0x01);
 /// cpu.cycle(&mut memory);

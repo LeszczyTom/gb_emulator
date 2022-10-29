@@ -9,6 +9,7 @@ use crate::gameboy::cpu::Flag::*;
 /// //RL C ; C <- 0x00, Z <- 1, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x11);
 /// # cpu.set_c(0x80);
@@ -21,9 +22,10 @@ use crate::gameboy::cpu::Flag::*;
 /// # memory.write_byte(0x03, 0x16);
 /// # cpu.set_h(0x10);
 /// # cpu.set_l(0x00);
-/// # memory.write_byte(0x100, 0x11);
+/// # cpu.set_f(0);
+/// # memory.write_byte(0x1000, 0x11);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(memory.read_byte(0x100), 0x22);
+/// assert_eq!(memory.read_byte(0x1000), 0x22);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
 fn rl_m(value: u8, cpu: &mut Cpu) -> u8 {
@@ -45,9 +47,11 @@ pub fn rl_r(r: Register, cpu: &mut Cpu) -> u8 {
     8
 }
 
-pub fn _rl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn rl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     let result = rl_m(memory.read_byte(cpu.get_rr(HL)), cpu);
     memory.write_byte(cpu.get_rr(HL), result);
+
+    println!("f: {:02x}", cpu.get_f());
 
     16
 }
@@ -58,12 +62,13 @@ pub fn _rl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //RLA ; A <- 0x2B, Z <- 0, N <- 0, H <- 0, C <- 1,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x17);
-/// # cpu.set_r("a", 0x95);
-/// # cpu.set_flag("c", true);
+/// # cpu.set_a(0x95);
+/// # cpu.set_f(0x10);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_r("a"), 0x2b);
-/// assert_eq!(cpu.get_r("f"), 0x10);
+/// assert_eq!(cpu.get_a(), 0x2b);
+/// assert_eq!(cpu.get_f(), 0x10);
 /// ```
 pub fn rla(cpu: &mut Cpu) -> u8 {
     let value = cpu.a;

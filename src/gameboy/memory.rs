@@ -29,6 +29,10 @@ impl Memory {
         }
     }
 
+    pub fn set_bios_enabled(&mut self, enabled: bool) {
+        self.bios_enabled = enabled;
+    }
+
     pub fn read_byte(&self, addr: u16) -> u8 {
         if self.bios_enabled & (addr < 0x100) {
             return self.bios[addr as usize];
@@ -38,8 +42,7 @@ impl Memory {
 
     pub fn write_byte(&mut self, addr: u16, val: u8) {
         if addr == 0xff50 {
-            println!("Disabling BIOS");
-            self.bios_enabled = val == 0;
+            self.set_bios_enabled(val == 0);
         }
         self.data[addr as usize] = val;
     }
