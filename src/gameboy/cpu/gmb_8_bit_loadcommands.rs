@@ -1,6 +1,6 @@
 use crate::gameboy::{ cpu::Cpu, memory::Memory };
 use crate::gameboy::cpu::Register;
-use crate::gameboy::cpu::RegisterPair::{ HL, DE };
+use crate::gameboy::cpu::RegisterPair::{ HL, DE, BC };
 
 /// Stores the contents of register A in the memory specified by register pair HL and simultaneously decrements the contents of HL.
 /// ``` rust
@@ -79,6 +79,25 @@ pub fn ld_de_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     8
 }
 
+/// Stores the contents of register A in the memory specified by register pair BC.
+/// ``` rust
+/// //Example: When BC = 0x205F and A = 0x3F,
+/// //LD (BC) , A ; (0x205F) <- 0x3F
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x02);
+/// # cpu.set_b(0x20);
+/// # cpu.set_c(0x5f);
+/// # cpu.set_a(0x3f);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0x205f), 0x3f);
+/// ```
+pub fn ld_bc_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    memory.write_byte(cpu.get_rr(BC), cpu.a);
+    8
+}
+
 /// Loads into 0xffnn the contents of the register A.
 /// ```rust
 /// //Example: When n = 0x12, A = 0x34
@@ -115,6 +134,25 @@ pub fn ldh_n_a(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// ```
 pub fn ld_a_de(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     cpu.a = memory.read_byte(cpu.get_rr(DE));
+    8
+}
+
+/// Loads the contents specified by the contents of register pair BC into register A.
+/// ``` rust
+/// //Example: When (BC) = 0x2F,
+/// //LD A, (BC) ; A <- 0x2F
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x0a);
+/// # cpu.set_b(0x10);
+/// # cpu.set_c(0x00);
+/// # memory.write_byte(0x1000, 0x2f);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x2f);
+/// ```
+pub fn ld_a_bc(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    cpu.a = memory.read_byte(cpu.get_rr(BC));
     8
 }
 

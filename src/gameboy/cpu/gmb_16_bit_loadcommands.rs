@@ -69,3 +69,25 @@ pub fn pop_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     
     12
 }
+
+/// Stores the lower byte of SP at address nn specified by the 16-bit immediate operand nn and the upper byte of SP at address nn + 1.
+/// ```rust	
+/// //Example: When SP = 0xFFF8,
+/// //LD (0xc100) , SP ; 0xc100 <- 0xF8, 0xc101 <- 0xFF
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x08);
+/// # memory.write_byte(0x01, 0x00);
+/// # memory.write_byte(0x02, 0x01);
+/// # cpu.set_sp(0xfff8);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(memory.read_byte(0x100), 0xf8);
+/// assert_eq!(memory.read_byte(0x101), 0xff);
+/// ```
+pub fn ld_nn_sp(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let nn = cpu.read_nn(memory);
+    memory.write_byte(nn, cpu.sp as u8);
+    memory.write_byte(nn.wrapping_add(1), (cpu.sp >> 8) as u8);
+    20
+}

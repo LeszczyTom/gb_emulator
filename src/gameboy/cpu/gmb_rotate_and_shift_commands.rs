@@ -83,3 +83,86 @@ pub fn rla(cpu: &mut Cpu) -> u8 {
     cpu.a = result;
     4
 }
+
+/// Rotates the contents of register A to the right.
+/// ```rust
+/// //Example: When A = 0x81 and CY = 0,
+/// //RRA ; A <- 0x40,  Z <- 0, N <- 0, H <- 0, CY <- 1 ,
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x1f);
+/// # cpu.set_a(0x81);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x40);
+/// assert_eq!(cpu.get_f(), 0x10);
+/// ```
+pub fn rra(cpu: &mut Cpu) -> u8 {
+    let value = cpu.a;
+    let carry = cpu.get_flag(Carry);
+    let result = (value >> 1) | (carry as u8) << 7;
+
+    cpu.set_flag(Zero, false);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, value & 0x01 == 1);
+
+    cpu.a = result;
+    4
+}
+
+/// Rotates the contents of register A to the left.
+/// ```rust
+/// //Example: When A = 0x85 and CY = 0,
+/// //RLCA ; A <- 0x0a,  Z <- 0, N <- 0, H <- 0, CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x07);
+/// # cpu.set_a(0x85);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x0a);
+/// assert_eq!(cpu.get_f(), 0x10);
+/// ```
+pub fn rlca(cpu: &mut Cpu) -> u8 {
+    let value = cpu.a;
+    let carry = cpu.get_flag(Carry);
+    let result = (value << 1) | carry as u8;
+
+    cpu.set_flag(Zero, false);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, value >> 7 == 1);
+
+    cpu.a = result;
+    4
+}
+
+/// Rotates the contents of register A to the right.
+/// ```rust
+/// //Example: When A = 0x3B and CY = 0,
+/// //RRCA ; A <- 0x9D, Z <- 0, N <- 0, H <- 0, CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x0f);
+/// # cpu.set_a(0x3b);
+/// # cpu.set_f(0);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x9d);
+/// assert_eq!(cpu.get_f(), 0x10);
+/// ```
+pub fn rrca(cpu: &mut Cpu) -> u8 {
+    let value = cpu.a;
+    let result = value.rotate_right(1);
+
+    cpu.set_flag(Zero, false);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, false);
+    cpu.set_flag(Carry, value & 0x01 == 1);
+
+    cpu.a = result;
+    4
+}

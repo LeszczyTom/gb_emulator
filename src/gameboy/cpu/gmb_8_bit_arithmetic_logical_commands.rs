@@ -343,3 +343,48 @@ pub fn add_a_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
     8
 }
+
+/// Adds the contents of register r to those of register A and stores the results in register A.
+/// ``` rust
+/// //Example: When A = 0x3A and B = 0xC6,
+/// //ADD A, B ; A <- 0, Z <- 1 , N <- 0, H <- 1 , CY <- 1
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x80);
+/// # cpu.set_a(0x3a);
+/// # cpu.set_b(0xc6);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0);
+/// assert_eq!(cpu.get_f(), 0xb0);
+/// ```
+pub fn add_a_r(r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r);
+    add_s(value, cpu);
+
+    4
+}
+
+/// Loads in register A the contents of memory specified by the contents of register pair HL and simultaneously increments the contents of HL.
+/// ``` rust
+/// //Example: When HL = 0x1FF and (0x1FF) = 0x56,
+/// //LD A, (HLI) ; A <- 0x56, HL <- 0x200
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x2a);
+/// # cpu.set_h(0x01);
+/// # cpu.set_l(0xff);
+/// # memory.write_byte(0x01ff, 0x56);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x56);
+/// assert_eq!(cpu.get_h(), 0x02);
+/// assert_eq!(cpu.get_l(), 0x00);
+/// ```
+pub fn ld_a_hli(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_rr(HL));
+    cpu.set_a(value);
+    cpu.set_rr(HL, cpu.get_rr(HL).wrapping_add(1));
+
+    8
+}
