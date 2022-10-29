@@ -139,23 +139,24 @@ pub fn sub_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //CP B ; Z <- 0, N <- 1, H <- 1, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
-/// # memory.write_byte(0x00, 0xb8);
+/// # memory.write_byte(0x100, 0xb8);
+/// # cpu.set_pc(0x100);
 /// # cpu.set_a(0x3c);
 /// # cpu.set_b(0x2f);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_f(), 0x60);
 /// //CP 0x3C ; Z <- 1, N <- 1, H <- 0, CY <- 0
-/// # cpu.set_pc(0x00);
-/// # memory.write_byte(0x00, 0xfe);
-/// # memory.write_byte(0x01, 0x3c);
+/// # cpu.set_pc(0x100);
+/// # memory.write_byte(0x100, 0xfe);
+/// # memory.write_byte(0x101, 0x3c);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_f(), 0xc0);
 /// //CP (HL) ; Z <- 0, N <- 1, H <- 0 , CY <- 1
-/// # cpu.set_pc(0x00);
-/// # memory.write_byte(0x00, 0xbe);
-/// # cpu.set_h(0x01);
+/// # cpu.set_pc(0x100);
+/// # memory.write_byte(0x100, 0xbe);
+/// # cpu.set_h(0x10);
 /// # cpu.set_l(0x00);
-/// # memory.write_byte(0x100, 0x40);
+/// # memory.write_byte(0x1000, 0x40);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_f(), 0x50);
 /// ```
@@ -197,15 +198,16 @@ pub fn cp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //XOR A ; A <- 0x00, Z <- 1 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
-/// # memory.write_byte(0x00, 0xaf);
+/// # memory.write_byte(0x100, 0xaf);
+/// # cpu.set_pc(0x100);
 /// # cpu.set_a(0xff);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_a(), 0x00);
 /// assert_eq!(cpu.get_f(), 0x80);
 /// 
 /// //XOR 0x0F ; A <- 0xF0, Z <- 0
-/// # cpu.set_pc(0x00);
-/// # memory.write_byte(0x00, 0xee);
+/// # cpu.set_pc(0x100);
+/// # memory.write_byte(0x100, 0xee);
 /// # cpu.set_a(0xff);
 /// # memory.write_byte(0x01, 0x0f);
 /// cpu.cycle(&mut memory);
@@ -213,8 +215,8 @@ pub fn cp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x00);
 /// 
 /// //XOR (HL) ; A <- 75h, Z <- 0
-/// # cpu.set_pc(0x00);
-/// # memory.write_byte(0x00, 0xae);
+/// # cpu.set_pc(0x100);
+/// # memory.write_byte(0x100, 0xae);
 /// # cpu.set_a(0xff);
 /// # cpu.set_h(0x10);
 /// # cpu.set_l(0x00);
@@ -262,7 +264,8 @@ pub fn _xor_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //CPL ; A <- 0xCA
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
-/// # memory.write_byte(0x00, 0x2f);
+/// # memory.write_byte(0x100, 0x2f);
+/// # cpu.set_pc(0x100);
 /// # cpu.set_a(0x35);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_a(), 0xca);
@@ -282,7 +285,8 @@ fn _cpl(cpu: &mut Cpu) -> u8 {
 /// //INC A ; A <- 0, Z <- 1, N <- 0, H <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
-/// # memory.write_byte(0x00, 0x3c);
+/// # memory.write_byte(0x100, 0x3c);
+/// # cpu.set_pc(0x100);
 /// # cpu.set_a(0xff);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_a(), 0);
@@ -298,4 +302,37 @@ pub fn inc_r(r: Register, cpu: &mut Cpu) -> u8 {
     cpu.set_flag(HalfCarry, value & 0xf == 0xf);
 
     4
+}
+
+/// Adds the contents of operand s to those of register A and stores the results in register A. r, n, and (HL) are used for operand s.
+fn add_s(value: u8, cpu: &mut Cpu) {
+    cpu.a = cpu.a.wrapping_add(value);
+
+    cpu.set_flag(Zero, cpu.a == 0);
+    cpu.set_flag(Subtract, false);
+    cpu.set_flag(HalfCarry, (cpu.a & 0xf) < (value & 0xf));
+    cpu.set_flag(Carry, (cpu.a as u16) < (value as u16));
+}
+
+/// Adds the contents of memory specified by the contents of register pair HL to the contents of register A and stores the results in register A. 
+/// ``` rust
+/// //Example: When A = 0x3C and (HL) = 0x12,
+/// //ADD A, (HL) ; A <- 0x4E, Z <- 0, N <- 0, H <- 0, CY <- 0
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.write_byte(0x100, 0x86);
+/// # cpu.set_pc(0x100);
+/// # cpu.set_a(0x3c);
+/// # cpu.set_h(0x10);
+/// # cpu.set_l(0x00);
+/// # memory.write_byte(0x1000, 0x12);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_a(), 0x4e);
+/// assert_eq!(cpu.get_f(), 0x00);
+/// ```
+pub fn add_a_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let value = memory.read_byte(cpu.get_rr(HL));
+    add_s(value, cpu);
+
+    8
 }

@@ -2,6 +2,8 @@ const MEM_SIZE: usize = 0x10000;
 
 pub struct Memory {
     data: [u8; MEM_SIZE],
+    bios: [u8; 0x100],
+    bios_enabled: bool,
 }
 
 impl Memory {
@@ -11,21 +13,34 @@ impl Memory {
             Err(e) => panic!("Error: {}", e)
         }; 
 
+        let rom = match std::fs::read("resources/tetris.gb") {
+            Ok(bytes) => bytes,
+            Err(e) => panic!("Error: {}", e)
+        }; 
+
         let mut data = [0; MEM_SIZE];
-        for i in 0..bios.len() {
-            data[i] = bios[i];
-        }
+        data[0..0x8000].copy_from_slice(&rom);
 
         Self {
             data,
+            bios: bios.try_into()
+                .unwrap_or_else(|v: Vec<u8>| panic!("Expected a Vec of length {} but it was {}", 100, v.len())),
+            bios_enabled: true,
         }
     }
 
     pub fn read_byte(&self, addr: u16) -> u8 {
-        self.data[addr as usize]
+        if self.bios_enabled & (addr < 0x100) {
+            return self.bios[addr as usize];
+        } 
+        self.data[addr as usize] 
     }
 
     pub fn write_byte(&mut self, addr: u16, val: u8) {
+        if addr == 0xff50 {
+            println!("Disabling BIOS");
+            self.bios_enabled = val == 0;
+        }
         self.data[addr as usize] = val;
     }
 
