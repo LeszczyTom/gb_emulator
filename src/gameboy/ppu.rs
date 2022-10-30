@@ -155,6 +155,7 @@ impl Ppu {
                     memory.set_ly(ly);
                     if ly == 144 { // At line 144, the PPU enters V-Blank
                         self.mode = Mode::VBlank;
+                        memory.set_interrupt_flag(0);
                     } else {
                         self.mode = Mode::OAM;
                     }

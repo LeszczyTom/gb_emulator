@@ -167,7 +167,7 @@ pub fn jp_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// # memory.write_byte(0x1, 0x00);
 /// # memory.write_byte(0x2, 0x80);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_pc(), 0x0001);
+/// assert_eq!(cpu.get_pc(), 0x0003);
 /// 
 /// //JP Z, 0x8000; Jump to 0x8000
 /// # cpu.set_pc(0x0);
@@ -179,7 +179,7 @@ pub fn jp_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// # cpu.set_pc(0x0);
 /// # memory.write_byte(0x0, 0xda);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_pc(), 0x0001);
+/// assert_eq!(cpu.get_pc(), 0x0003);
 /// 
 /// //JP NC, 0x8000; Jump to 0x8000
 /// # cpu.set_pc(0x0);
@@ -191,6 +191,7 @@ pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     if cpu.get_flag(condition) {
         jp_nn(cpu, memory)
     } else {
+        cpu.pc += 2;
         12
     }
 }

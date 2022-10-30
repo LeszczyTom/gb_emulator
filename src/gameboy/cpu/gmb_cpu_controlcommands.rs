@@ -1,5 +1,9 @@
 use crate::gameboy::cpu::Cpu;
+use crate::gameboy::memory::Memory;
 use crate::gameboy::cpu::Flag::*;
+
+use super::RegisterPair;
+use super::gmb_16_bit_loadcommands::push_rr;
 
 /// Sets the interrupt master enable flag and enables maskable interrupts.
 /// This instruction can be used in an interrupt routine to enable higher-order interrupts.
@@ -12,8 +16,10 @@ use crate::gameboy::cpu::Flag::*;
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_ime(), true);
 /// ```
-pub fn ei(cpu: &mut Cpu) -> u8 {
+pub fn ei(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     cpu.ime = true;
+
+    memory.write_byte(0xFFFF, 0x1f);
     4
 }
 
@@ -119,7 +125,60 @@ pub fn halt(cpu: &mut Cpu) -> u8 {
 }
 
 /// Resets the interrupt master enable flag and prohibits maskable interrupts.
-pub fn di(cpu: &mut Cpu) -> u8 {
+pub fn di(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     cpu.ime = false;
+    memory.write_byte(0xFFFF, 0x00);
     4
+}
+
+pub fn handle_interrupts(cpu: &mut Cpu, memory: &mut Memory) -> bool {
+    let interupt_enable = memory.read_byte(0xffff);
+    let interupt_flag = memory.read_byte(0xff0f);
+        
+    // V-Blank
+    if interupt_enable & 1 == 1 && interupt_flag & 1 == 1 {
+        cpu.ime = false;
+        memory.write_byte(0xff0f, interupt_flag ^ 1);
+        push_rr(RegisterPair::PC, cpu, memory);
+        cpu.pc = 0x40;
+        return true;
+    }
+    
+    // LCD STAT
+    if interupt_enable & 2 == 2 && interupt_flag & 2 == 2 {
+        cpu.ime = false;
+        memory.write_byte(0xff0f, interupt_flag ^ 2);
+        push_rr(RegisterPair::PC, cpu, memory);
+        cpu.pc = 0x48;
+        return true;
+    }
+
+    // Timer
+    if interupt_enable & 4 == 4 && interupt_flag & 4 == 4 {
+        cpu.ime = false;
+        memory.write_byte(0xff0f, interupt_flag ^ 4);
+        push_rr(RegisterPair::PC, cpu, memory);
+        cpu.pc = 0x50;
+        return true;
+    }
+
+    // Serial
+    if interupt_enable & 8 == 8 && interupt_flag & 8 == 8 {
+        cpu.ime = false;
+        memory.write_byte(0xff0f, interupt_flag ^ 8);
+        push_rr(RegisterPair::PC, cpu, memory);
+        cpu.pc = 0x58;
+        return true;
+    }
+
+    // Joypad
+    if interupt_enable & 16 == 16 && interupt_flag & 16 == 16 {
+        cpu.ime = false;
+        memory.write_byte(0xff0f, interupt_flag ^ 16);
+        push_rr(RegisterPair::PC, cpu, memory);
+        cpu.pc = 0x60;
+        return true;
+    }
+
+    false
 }

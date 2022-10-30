@@ -206,8 +206,21 @@ impl Cpu {
         }
     }
 
-    pub fn get_halt(&self) -> bool {
+    pub fn get_halt(&mut self, memory: &mut Memory) -> bool {
+        if memory.read_byte(0xFF0F) & memory.read_byte(0xFFFF) != 0 {
+            self.halt = false;
+        }
+        
+        // Interrupts is pending
+        if memory.read_byte(0xFF0F) != 0 {
+            self.halt = false;
+        }
+
         self.halt
+    }
+
+    pub fn set_halt(&mut self, value: bool) {
+        self.halt = value;
     }
 
     fn read_n(&mut self, memory: &mut Memory) -> u8 {
@@ -229,6 +242,10 @@ impl Cpu {
     }
 
     pub fn cycle(&mut self, memory: &mut Memory) -> u8 {
+        if self.ime && handle_interrupts(self, memory) {
+            return 20;
+        }
+
         let opcode =self.fetch_opcode(memory);
         self.exectute(opcode, memory)
     }
@@ -493,7 +510,7 @@ impl Cpu {
             0xf0 => ldh_a_n(self, memory),
             0xf1 => pop_rr(AF, self, memory),
             0xf2 => ld_a_c(self, memory),
-            0xf3 => di(self),
+            0xf3 => di(self, memory),
             0xf4 => panic!("Not valid opcode"),
             0xf5 => push_rr(AF, self, memory),
             0xf6 => or_n(self, memory),
@@ -501,7 +518,7 @@ impl Cpu {
             0xf8 => ldhl_sp_n(self, memory),
             0xf9 => ld_sp_hl(self),
             0xfa => ld_a_nn(self, memory),
-            0xfb => ei(self),
+            0xfb => ei(self, memory),
             0xfc => panic!("Not valid opcode"),
             0xfd => panic!("Not valid opcode"),
             0xfe => cp_n(self, memory),

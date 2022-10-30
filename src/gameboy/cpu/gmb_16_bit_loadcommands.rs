@@ -41,9 +41,10 @@ pub fn ld_rr_nn(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// ```
 pub fn push_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     let value = cpu.get_rr(rr).to_be_bytes();
-    memory.write_byte(cpu.sp.wrapping_sub(1), value[0]);
-    memory.write_byte(cpu.sp.wrapping_sub(2), value[1]);
-    cpu.sp = cpu.sp.wrapping_sub(2);
+    cpu.sp = cpu.sp.wrapping_sub(1);
+    memory.write_byte(cpu.sp, value[0]);
+    cpu.sp = cpu.sp.wrapping_sub(1);
+    memory.write_byte(cpu.sp, value[1]);
     16
 }
 
@@ -64,12 +65,13 @@ pub fn push_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// ```
 pub fn pop_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     let low = memory.read_byte(cpu.sp);
-    let high = memory.read_byte(cpu.sp.wrapping_add(1));
+    cpu.sp = cpu.sp.wrapping_add(1);
+    let high = memory.read_byte(cpu.sp);
+    cpu.sp = cpu.sp.wrapping_add(1);
+
     cpu.set_rr(rr, u16::from_be_bytes([high, low]));
-    cpu.sp = cpu.sp.wrapping_add(2);
     
-    let f = cpu.get_f();
-    cpu.set_f(f & 0xf0);
+    cpu.set_f(cpu.get_f() & 0xf0);
     12
 }
 
@@ -110,16 +112,16 @@ pub fn ld_nn_sp(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_f(), 0);
 /// 
 /// //Example: When SP = 0xFFFF,
-/// //LDHL SP, 2 ; HL <- 0x1, Z <- 0,  N <- 0, H <- 0, CY <- 1
-/// # cpu.set_sp(0xffff);
+/// //LDHL SP, -2 ; HL <- 0xFFFE, Z <- 0,  N <- 0, H <- 0, CY <- 0
+/// # cpu.set_sp(0xfff8);
 /// # memory.write_byte(0x02, 0xf8);
-/// # memory.write_byte(0x03, 0x02);
+/// # memory.write_byte(0x03, 0xfe);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_hl(), 0x1);
-/// //assert_eq!(cpu.get_f(), 0x10);
+/// assert_eq!(cpu.get_hl(), 0xfff6);
+/// //assert_eq!(cpu.get_f(), 0x0);
 /// ```
 pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 { //TODO fix flags
-    let n = cpu.read_n(memory) as u16;
+    let n = cpu.read_n(memory) as i8 as u16;
     let sp = cpu.sp;
     let result = cpu.sp.wrapping_add(n);
     cpu.set_rr(RegisterPair::HL, result);
