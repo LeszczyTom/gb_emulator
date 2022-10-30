@@ -68,6 +68,8 @@ pub fn pop_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     cpu.set_rr(rr, u16::from_be_bytes([high, low]));
     cpu.sp = cpu.sp.wrapping_add(2);
     
+    let f = cpu.get_f();
+    cpu.set_f(f & 0xf0);
     12
 }
 

@@ -1,7 +1,7 @@
 # Blargg's tests
 ## cpu_instrs
 
-- [ ] 01-special.gb
+- [x] 01-special.gb
 - [ ] 02-interrupts.gb
 - [ ] 03-op sp,hl.gb
 - [x] 04-op r,imm.gb
