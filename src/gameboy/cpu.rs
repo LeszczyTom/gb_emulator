@@ -34,7 +34,7 @@ pub enum Register {
     F,
 }
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum RegisterPair {
     AF,
     BC,
