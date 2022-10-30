@@ -22,12 +22,13 @@ struct App {
 const FPS: u32 = 240;
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
+const SCALE: f64 = 1.;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        let scaled_size = LogicalSize::new(WIDTH as f64 * 5.0, HEIGHT as f64 * 5.0);
+        let scaled_size = LogicalSize::new(WIDTH as f64 * SCALE, HEIGHT as f64 * SCALE);
         WindowBuilder::new()
             .with_title("GameBoy emulator")
             .with_inner_size(scaled_size)

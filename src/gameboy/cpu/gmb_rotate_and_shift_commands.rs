@@ -51,8 +51,6 @@ pub fn rl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     let result = rl_m(memory.read_byte(cpu.get_rr(HL)), cpu);
     memory.write_byte(cpu.get_rr(HL), result);
 
-    println!("f: {:02x}", cpu.get_f());
-
     16
 }
 
@@ -407,7 +405,7 @@ pub fn sla_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
 fn sra_m(value: u8, cpu: &mut Cpu) -> u8 {
     let result = (value >> 1) | (value & 0x80);
-    println!("result: {}", result);
+
     cpu.set_flag(Zero, result == 0);
     cpu.set_flag(Subtract, false);
     cpu.set_flag(HalfCarry, false);
