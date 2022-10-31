@@ -640,3 +640,28 @@ pub fn or_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
     8
 }
+
+/// Subtract 1 from the contents of register r by 1.
+/// ```rust
+/// //Example: When B = 0x01,
+/// //DEC B ; B <- 0, Z <- 1, N <— 1 H <- 0,
+/// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
+/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # memory.set_bios_enabled(false);
+/// # memory.write_byte(0x00, 0x05);
+/// # cpu.set_b(0x01);
+/// cpu.cycle(&mut memory);
+/// assert_eq!(cpu.get_b(), 0x00);
+/// assert_eq!(cpu.get_f(), 0xc0);
+/// ```
+pub fn dec_r( r: Register, cpu: &mut Cpu) -> u8 {
+    let value = cpu.get_r(r.clone());
+    let result = value.wrapping_sub(1);
+
+    cpu.set_flag(Zero, result == 0);
+    cpu.set_flag(Subtract, true);
+    cpu.set_flag(HalfCarry, (value & 0x0f) == 0);
+
+    cpu.set_r(r, result);
+    4
+}

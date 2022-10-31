@@ -113,7 +113,7 @@ pub fn rra(cpu: &mut Cpu) -> u8 {
 /// Rotates the contents of register A to the left.
 /// ```rust
 /// //Example: When A = 0x85 and CY = 0,
-/// //RLCA ; A <- 0x0a,  Z <- 0, N <- 0, H <- 0, CY <- 1
+/// //RLCA ; A <- 0x0b,  Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
 /// # memory.set_bios_enabled(false);
@@ -121,20 +121,18 @@ pub fn rra(cpu: &mut Cpu) -> u8 {
 /// # cpu.set_a(0x85);
 /// # cpu.set_f(0);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_a(), 0x0a);
+/// assert_eq!(cpu.get_a(), 0x0b);
 /// assert_eq!(cpu.get_f(), 0x10);
 /// ```
 pub fn rlca(cpu: &mut Cpu) -> u8 {
     let value = cpu.a;
-    let carry = cpu.get_flag(Carry);
-    let result = (value << 1) | carry as u8;
+    cpu.a = (value << 1) | (value >> 7);
 
     cpu.set_flag(Zero, false);
     cpu.set_flag(Subtract, false);
     cpu.set_flag(HalfCarry, false);
-    cpu.set_flag(Carry, value >> 7 == 1);
+    cpu.set_flag(Carry, value > 0x7f);
 
-    cpu.a = result;
     4
 }
 
@@ -460,7 +458,7 @@ pub fn sra_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 }
 
 fn swap_m(value: u8, cpu: &mut Cpu) -> u8 {
-    let result = value.to_le();
+    let result = value << 4 & 240 | value >> 4;
 
     cpu.set_flag(Zero, result == 0);
     cpu.set_flag(Subtract, false);
