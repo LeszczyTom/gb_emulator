@@ -5,6 +5,7 @@ I'm making this GameBoy emulator to learn.
 My goal for now is to run Tetris.
 In the end, I want this emulator to pass all the Blargg's test. 
 
+## [Tests](https://github.com/LeszczyTom/gb_emulator/blob/master/tests/README.md)
 
 ## Resources
 
