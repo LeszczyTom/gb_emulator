@@ -96,13 +96,13 @@ pub fn dec_r( r: Register, cpu: &mut Cpu) -> u8 {
 /// ```
 pub fn add_hl_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
     let value = cpu.get_rr(rr.clone());
-    let result = cpu.get_rr(HL).wrapping_add(value);
+    let result = cpu.get_rr(HL).overflowing_add(value);
 
-    cpu.set_flag(HalfCarry, (cpu.get_rr(HL) & 0x0fff) + (value & 0x0fff) > 0x0fff);
-    cpu.set_flag(Carry, result < cpu.get_rr(HL));
+    cpu.set_flag(HalfCarry, value & 0x0fff > result.0 & 0x0fff);
+    cpu.set_flag(Carry, result.1);
     cpu.set_flag(Subtract, false);
 
-    cpu.set_rr(HL, result);
+    cpu.set_rr(HL, result.0);
     8
 }
 
@@ -160,7 +160,7 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
 /// Adds the contents of the 8-bit immediate operand e and SP and stores the results in SP. 
 /// ```rust
-/// //Example: SP = 0xFFF8
+/// //Example: When SP = 0xFFF8,
 /// //ADD SP, 2 ; SP <- 0xFFFA, Z <- 0,  N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Memory::new();
@@ -170,33 +170,27 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// # cpu.set_sp(0xfff8);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_sp(), 0xfffa);
-/// assert_eq!(cpu.get_f(), 0x00);
+/// assert_eq!(cpu.get_f(), 0);
 /// 
-/// // SP = 0xFFF
-/// //ADD SP, 1 ; SP <- 0x1000, Z <- 0, N <- 0, H <- 1, CY <- 0
+/// //Example: When SP = 0xFFF8,
+/// //ADD SP, -2 ; SP <- 0xFFF6, Z <- 0,  N <- 0, H <- 1, CY <- 1
+/// # cpu.set_sp(0xfff8);
 /// # memory.write_byte(0x02, 0xe8);
-/// # memory.write_byte(0x03, 0x1);
-/// # cpu.set_sp(0xfff);
+/// # memory.write_byte(0x03, 0xfe);
 /// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_sp(), 0x1000);
-/// assert_eq!(cpu.get_f(), 0x20);
-/// 
-/// // ADD SP, -1 ; SP <- 0xfff, Z <- 0, N <- 0, H <- 1, CY <- 0
-/// # memory.write_byte(0x04, 0xe8);
-/// # memory.write_byte(0x05, 0xff);
-/// cpu.cycle(&mut memory);
-/// assert_eq!(cpu.get_sp(), 0xfff);
-/// //assert_eq!(cpu.get_f(), 0x20); 
+/// assert_eq!(cpu.get_sp(), 0xfff6);
+/// assert_eq!(cpu.get_f(), 0x30);
 /// ```
-pub fn add_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 { //TODO: Fix flag
-    let value = cpu.read_n(memory) as i8 as i16 as u16;
+pub fn add_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+    let n = cpu.read_n(memory) as i8 as u16;
     let sp = cpu.get_sp();
-    cpu.sp = cpu.sp.wrapping_add(value);
-    
+    let result = cpu.sp.wrapping_add(n);
+    cpu.sp = result;
+
     cpu.set_flag(Zero, false);
     cpu.set_flag(Subtract, false);
-    cpu.set_flag(HalfCarry, (sp & 0xfff).wrapping_add(value & 0xfff) > 0xfff);
-    cpu.set_flag(Carry, (sp).overflowing_add(value).1 == true);
+    cpu.set_flag(HalfCarry, (sp ^ n ^ result) & 0x10 == 0x10);
+    cpu.set_flag(Carry, (sp ^ n ^ result) & 0x100 == 0x100);
 
     16
 }

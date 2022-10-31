@@ -111,16 +111,16 @@ pub fn ld_nn_sp(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_hl(), 0xfffa);
 /// assert_eq!(cpu.get_f(), 0);
 /// 
-/// //Example: When SP = 0xFFFF,
-/// //LDHL SP, -2 ; HL <- 0xFFFE, Z <- 0,  N <- 0, H <- 0, CY <- 0
+/// //Example: When SP = 0xFFF8,
+/// //LDHL SP, -2 ; HL <- 0xFFF6, Z <- 0,  N <- 0, H <- 1, CY <- 1
 /// # cpu.set_sp(0xfff8);
 /// # memory.write_byte(0x02, 0xf8);
 /// # memory.write_byte(0x03, 0xfe);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_hl(), 0xfff6);
-/// //assert_eq!(cpu.get_f(), 0x0);
+/// assert_eq!(cpu.get_f(), 0x30);
 /// ```
-pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 { //TODO fix flags
+pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     let n = cpu.read_n(memory) as i8 as u16;
     let sp = cpu.sp;
     let result = cpu.sp.wrapping_add(n);
@@ -128,8 +128,8 @@ pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 { //TODO fix flags
 
     cpu.set_flag(Zero, false);
     cpu.set_flag(Subtract, false);
-    cpu.set_flag(HalfCarry, (sp & 0xfff).wrapping_add(n & 0xfff) > 0xfff);
-    cpu.set_flag(Carry, (sp).overflowing_add(n).1 == true);
+    cpu.set_flag(HalfCarry, (sp ^ n ^ result) & 0x10 == 0x10);
+    cpu.set_flag(Carry, (sp ^ n ^ result) & 0x100 == 0x100);
     
     12
 }
