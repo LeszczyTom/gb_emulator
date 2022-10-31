@@ -1,6 +1,4 @@
-pub mod gmb;
-
-use std::time::Duration;
+use gameboy::gameboy::GameBoy;
 
 use pixels:: {
     Error,
@@ -8,30 +6,29 @@ use pixels:: {
     SurfaceTexture,
 };
 
-use game_loop::{game_loop, Time, TimeTrait};
+use game_loop::game_loop;
 use game_loop::winit::event::{Event, WindowEvent};
 use game_loop::winit::event_loop::EventLoop;
 use game_loop::winit::window::WindowBuilder;
 
-use gmb::GMB;
-
 use winit::dpi::LogicalSize;
 
 struct App {
-    gmb: GMB,
+    gameboy: GameBoy,
     pixels: Pixels,
-    paused: bool,
+    _paused: bool,
 }
 
-const FPS: u64 = 4_194_304;
+const FPS: u32 = 240;
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
+const SCALE: f64 = 1.;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        let scaled_size = LogicalSize::new(WIDTH as f64 * 5.0, HEIGHT as f64 * 5.0);
+        let scaled_size = LogicalSize::new(WIDTH as f64 * SCALE, HEIGHT as f64 * SCALE);
         WindowBuilder::new()
             .with_title("GameBoy emulator")
             .with_inner_size(scaled_size)
@@ -46,32 +43,25 @@ fn main() -> Result<(), Error> {
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
     
-    let mut gmb = GMB::new();
-    gmb.init("resources/tetris.gb");
-
+    
     let app = App {
-        gmb,
+        gameboy: GameBoy::new(),
         pixels,
-        paused: false,
+        _paused: false,
     };
 
-    game_loop(event_loop, window, app, FPS as u32, 0.5, move |g| {
-        // update
-        g.game.gmb._cycle(g.game.pixels.get_frame());
+    game_loop(event_loop, window, app, FPS, 0.1, move |g| {
+
+        g.game.gameboy.cycle(g.game.pixels.get_frame(), FPS);
+
     }, move |g| {
         if let Err(e) = g.game.pixels.render() {
             println!("pixels.render() failed: {}", e);
             g.exit();
         }
-        
-        let dt = Duration::from_nanos(1_000_000_000 / FPS).as_secs_f64() - Time::now().sub(&g.current_instant());
-        if dt > 0.0 {
-            std::thread::sleep(Duration::from_secs_f64(dt));
-        }
     }, |g, event| {
         match event {
             Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
-                g.game.paused = true;
                 g.exit();
             },
             Event::WindowEvent { 

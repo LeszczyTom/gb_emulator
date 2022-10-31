@@ -1,6 +1,5 @@
 use std::collections::VecDeque;
-
-use super::memory::MEMORY;
+use crate::gameboy::memory::Memory;
 
 #[derive(Debug)]
 enum Mode {
@@ -36,7 +35,7 @@ impl Fetcher {
         }
     }
 
-    fn cycle(&mut self, memory: &mut MEMORY, fifo: &mut VecDeque<(u8, u8)>) {
+    fn cycle(&mut self, memory: &mut Memory, fifo: &mut VecDeque<(u8, u8)>) {
         let scx = memory.get_scx();
         let scy = memory.get_scy();
         let x = ((scx / 8) + self.x as u8) & 0x1F;
@@ -96,7 +95,7 @@ impl FIFO {
         self.clock = false;
     }
 
-    pub fn cycle(&mut self, memory: &mut MEMORY) -> Option<(u8, u8)> {
+    pub fn cycle(&mut self, memory: &mut Memory) -> Option<(u8, u8)> {
         if self.clock { // 1Mhz
             self.clock = false;
             return self.push()
@@ -116,16 +115,16 @@ impl FIFO {
     }
 }
 
-pub struct PPU {
+pub struct Ppu {
     mode: Mode,
     dots: u32,
     x: u8,
     clock: bool,
     backgorund_fifo: FIFO,
-    oam_fifo: FIFO,
+    _oam_fifo: FIFO,
 }
 
-impl PPU {
+impl Ppu {
     pub fn new() -> Self {
         Self {
             mode: Mode::HBlank,
@@ -133,15 +132,15 @@ impl PPU {
             x: 0,
             clock: false,
             backgorund_fifo: FIFO::new(),
-            oam_fifo: FIFO::new(),
+            _oam_fifo: FIFO::new(),
         }
     }
 
-    pub fn pixel_transfer(&mut self, memory: &mut MEMORY) -> Option<(u8, u8)> {
+    pub fn pixel_transfer(&mut self, memory: &mut Memory) -> Option<(u8, u8)> {
         self.backgorund_fifo.cycle(memory)
     }
 
-    pub fn cycle(&mut self, frame: &mut [u8], memory: &mut MEMORY) {
+    pub fn cycle(&mut self, frame: &mut [u8], memory: &mut Memory) {
         if self.clock { // 2MHz
             self.clock = false;
         }
@@ -156,6 +155,7 @@ impl PPU {
                     memory.set_ly(ly);
                     if ly == 144 { // At line 144, the PPU enters V-Blank
                         self.mode = Mode::VBlank;
+                        memory.set_interrupt_flag(0);
                     } else {
                         self.mode = Mode::OAM;
                     }
@@ -187,7 +187,7 @@ impl PPU {
                 match data {
                     None => (),
                     Some(i) => {
-                        let (color, pallette) = i;
+                        let (color, _) = i;
                         let a = match color {
                             0 => [255, 255, 255, 255],
                             1 => [0, 0, 0, 255],
@@ -207,12 +207,19 @@ impl PPU {
                 }
             }
         }
+        memory.set_stat_mode_flag( 
+            match self.mode {
+                Mode::HBlank => 0,
+                Mode::VBlank => 1,
+                Mode::OAM => 2,
+                Mode::PixelFetcher => 3,
+            });
         self.dots += 1;
     }
 }
 
 pub fn draw_color_at_pos(color: [u8;4], x: usize, y: usize, frame: &mut [u8]) {
-    let index = (y * crate::WIDTH as usize + x) * 4;
+    let index = (y * super::WIDTH as usize + x) * 4;
     frame[index] = color[0];        // R
     frame[index + 1] = color[1];    // G
     frame[index + 2] = color[2];    // B

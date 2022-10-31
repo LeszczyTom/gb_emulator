@@ -1,5 +1,5 @@
 [package]
-name = "gba_emulator"
+name = "gameboy"
 version = "0.1.0"
 edition = "2021"
 
