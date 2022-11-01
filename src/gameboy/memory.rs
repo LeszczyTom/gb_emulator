@@ -13,7 +13,7 @@ impl Memory {
             Err(e) => panic!("Error: {}", e)
         }; 
         
-        let rom = match std::fs::read("resources/instr_timing.gb") {
+        let rom = match std::fs::read("resources/dr_mario.gb") {
             Ok(bytes) => bytes,
             Err(e) => panic!("Error: {}", e)
         }; 
@@ -71,6 +71,10 @@ impl Memory {
 
     pub fn get_scx(&self) -> u8 {
         self.data[0xFF43]
+    }
+
+    pub fn get_background_palette(&self, index :u8) -> usize {
+        (self.data[0xFF47] >> (index * 2) & 0x3) as usize
     }
 
     pub fn set_stat_mode_flag(&mut self, mode: u8) {

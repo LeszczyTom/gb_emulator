@@ -1,6 +1,14 @@
 use std::collections::VecDeque;
 use crate::gameboy::memory::Memory;
 
+const COLORS: [[u8; 4]; 4] = [
+    [0xe0, 0xf8, 0xd0, 0xff],
+    [0x88, 0xc0, 0x70, 0xff],
+    [0x34, 0x68, 0x56, 0xff],
+    [0x08, 0x18, 0x20, 0xff],
+    ];
+
+
 #[derive(Debug)]
 enum Mode {
     HBlank,
@@ -35,7 +43,7 @@ impl Fetcher {
         }
     }
 
-    fn cycle(&mut self, memory: &mut Memory, fifo: &mut VecDeque<(u8, u8)>) {
+    fn cycle(&mut self, memory: &mut Memory, fifo: &mut VecDeque<([u8; 4])>) {
         let scx = memory.get_scx();
         let scy = memory.get_scy();
         let x = ((scx / 8) + self.x as u8) & 0x1F;
@@ -53,7 +61,7 @@ impl Fetcher {
                         let mut data = [0; 2];
                         data[0] = self.data0 >> (7 - i) & 1;
                         data[1] = self.data1 >> (7 - i) & 1;
-                        fifo.push_back(((data[1] << 1) | data[0], 0));
+                        fifo.push_back(COLORS[memory.get_background_palette((data[1] << 1) | data[0])]);
                     }
                 }
             }
@@ -76,7 +84,7 @@ impl Fetcher {
 
 struct FIFO {
     fetcher: Fetcher,
-    data: VecDeque<(u8, u8)>, // (color, pallette) tuples. color: [00, 01, 10, 11] - pallette: [0, 1, 2, 3]
+    data: VecDeque<([u8; 4])>,
     clock: bool,
 }
 
@@ -95,7 +103,7 @@ impl FIFO {
         self.clock = false;
     }
 
-    pub fn cycle(&mut self, memory: &mut Memory) -> Option<(u8, u8)> {
+    pub fn cycle(&mut self, memory: &mut Memory) -> Option<([u8; 4])> {
         if self.clock { // 1Mhz
             self.clock = false;
             return self.push()
@@ -106,7 +114,7 @@ impl FIFO {
         self.push()
     }
 
-    fn push(&mut self) -> Option<(u8, u8)> {
+    fn push(&mut self) -> Option<([u8; 4])> {
         if self.data.len() <= 7 {
             return None;
         }
@@ -136,7 +144,7 @@ impl Ppu {
         }
     }
 
-    pub fn pixel_transfer(&mut self, memory: &mut Memory) -> Option<(u8, u8)> {
+    pub fn pixel_transfer(&mut self, memory: &mut Memory) -> Option<([u8; 4])> {
         self.backgorund_fifo.cycle(memory)
     }
 
@@ -186,16 +194,10 @@ impl Ppu {
                 let data = self.pixel_transfer(memory);
                 match data {
                     None => (),
-                    Some(i) => {
-                        let (color, _) = i;
-                        let a = match color {
-                            0 => [255, 255, 255, 255],
-                            1 => [0, 0, 0, 255],
-                            2 => [0, 0, 0, 255],
-                            3 => [0, 0, 0, 255],
-                            _ => panic!("Invalid color"),
-                        };
-                        draw_color_at_pos(a, self.x.into(), ly.into(), frame);
+                    Some(color) => {
+  
+                        
+                        draw_color_at_pos(color, self.x.into(), ly.into(), frame);
                         self.x += 1;
                     }
                 }
