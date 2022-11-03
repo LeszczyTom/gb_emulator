@@ -1,31 +1,34 @@
 use gameboy::gameboy::GameBoy;
 
+use std::time;
+
+use winit::{
+    event::{Event, WindowEvent},
+    event_loop::EventLoop,
+    window::WindowBuilder,
+    dpi::LogicalSize
+};
+
 use pixels:: {
     Error,
     Pixels,
     SurfaceTexture,
 };
 
-use game_loop::game_loop;
-use game_loop::winit::event::{Event, WindowEvent};
-use game_loop::winit::event_loop::EventLoop;
-use game_loop::winit::window::WindowBuilder;
-
-use winit::dpi::LogicalSize;
-
 struct App {
     gameboy: GameBoy,
     pixels: Pixels,
-    _paused: bool,
+    last_render: std::time::Instant,
 }
 
-const FPS: u32 = 240;
+const FPS: u32 = 144;
 const WIDTH: u32 = 160;
 const HEIGHT: u32 = 144;
-const SCALE: f64 = 1.;
+const SCALE: f64 = 2.;
 
 fn main() -> Result<(), Error> {
     let event_loop = EventLoop::new();
+
     let window = {
         let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
         let scaled_size = LogicalSize::new(WIDTH as f64 * SCALE, HEIGHT as f64 * SCALE);
@@ -36,41 +39,49 @@ fn main() -> Result<(), Error> {
             .build(&event_loop)
             .unwrap()
     };
-    
+
     let pixels = {
         let window_size = window.inner_size();
         let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
         Pixels::new(WIDTH, HEIGHT, surface_texture)?
     };
     
-    
-    let app = App {
+    let mut app = App {
         gameboy: GameBoy::new(),
         pixels,
-        _paused: false,
+        last_render: std::time::Instant::now(),
     };
-
-    game_loop(event_loop, window, app, FPS, 0.1, move |g| {
-
-        g.game.gameboy.cycle(g.game.pixels.get_frame(), FPS);
-
-    }, move |g| {
-        if let Err(e) = g.game.pixels.render() {
-            println!("pixels.render() failed: {}", e);
-            g.exit();
-        }
-    }, |g, event| {
+    
+    event_loop.run(move |event, _, control_flow| {
+        control_flow.set_poll();
+    
         match event {
-            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
-                g.exit();
-            },
-            Event::WindowEvent { 
-                window_id: _, 
-                event: WindowEvent::KeyboardInput { device_id: _, input, is_synthetic: _ } 
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                ..
             } => {
-                println!("Keyboard input!: {:?}", input);
+                println!("The close button was pressed; stopping");
+                control_flow.set_exit();
             },
-            _ => {}
+            Event::MainEventsCleared => {
+                // Wait to redraw a frame to match the target frame rate.
+                if time::Instant::now() - app.last_render > time::Duration::from_secs_f64(1. / FPS as f64) {
+                    window.request_redraw();
+                }
+            },
+            Event::RedrawRequested(_) => {
+                // Redraw requested by the OS
+                if let Err(e) = app.pixels.render() {
+                    println!("pixels.render() failed: {}", e);
+                    control_flow.set_exit();
+                }
+
+                app.last_render = std::time::Instant::now();
+
+                // Update the gameboy state.
+                app.gameboy.cycle(app.pixels.get_frame(), FPS);
+            },
+            _ => ()
         }
     });
 }
