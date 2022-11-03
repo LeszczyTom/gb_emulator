@@ -111,4 +111,11 @@ impl Memory {
         }
         println!("|");
     }
+
+    pub fn get_tile(&self, index: usize) -> [u8; 16] {
+        let mut tile = [0; 16];
+        let start = 0x8000 + (index * 16);
+        tile.copy_from_slice(&self.data[start..start+16]);
+        tile
+    }
 }
