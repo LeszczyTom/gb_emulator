@@ -12,8 +12,8 @@ impl Memory {
             Ok(bytes) => bytes,
             Err(e) => panic!("Error: {}", e)
         }; 
-
-        let rom = match std::fs::read("resources/tetris.gb") {
+        
+        let rom = match std::fs::read("resources/dr_mario.gb") {
             Ok(bytes) => bytes,
             Err(e) => panic!("Error: {}", e)
         }; 
@@ -41,10 +41,20 @@ impl Memory {
     }
 
     pub fn write_byte(&mut self, addr: u16, val: u8) {
-        if addr == 0xff50 {
-            self.set_bios_enabled(val == 0);
-        }
         self.data[addr as usize] = val;
+
+        match addr {
+            0xFF50 => self.set_bios_enabled(val == 0),
+            0xFF04 => { // Reset timer registers if writting to DIV
+                self.data[0xFF04] = 0;
+                self.data[0xFF05] = 0;
+
+            },
+            0xFF01 => { // Serial debug
+                print!("{}", val as char);
+            },
+            _ => ()
+        }
     }
 
     pub fn get_ly(&self) -> u8 {
@@ -63,8 +73,30 @@ impl Memory {
         self.data[0xFF43]
     }
 
+    pub fn get_background_palette(&self, index :u8) -> usize {
+        (self.data[0xFF47] >> (index * 2) & 0x3) as usize
+    }
+
     pub fn set_stat_mode_flag(&mut self, mode: u8) {
         self.data[0xFF41] = (self.data[0xFF41] & 0xFC) | mode;
+    }
+
+    pub fn set_interrupt_flag(&mut self, flag: u8) {
+        self.data[0xFF0F] |= flag;
+    }
+
+    pub fn increment_divider(&mut self) {
+        if self.data[0xFF03] == 0xFF {
+            if self.data[0xFF04] == 0xFF {
+                self.data[0xFF04] = 0;
+                self.data[0xFF03] = 0;
+            } else {
+                self.data[0xFF03] = 0;
+                self.data[0xFF04] += 1;
+            }
+        } else {
+            self.data[0xFF03] += 1;
+        }
     }
 
     pub fn _dump_hex(&self, start: usize, end: usize) {
