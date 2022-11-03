@@ -64,7 +64,7 @@ pub fn bit_hl(b: u8, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     cpu.set_flag(Subtract, false);
     cpu.set_flag(HalfCarry, true);
 
-    12
+    16
 }
 
 /// Resets to 0 the specified bit in the specified register r.

@@ -498,7 +498,7 @@ pub fn swap_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x36);
-/// # memory.write_byte(0xff00, 0x0f);
+/// # memory.write_byte(0xff00, 0xf0);
 /// # cpu.set_h(0xff);
 /// # cpu.set_l(0x00);
 /// # cpu.set_f(0);

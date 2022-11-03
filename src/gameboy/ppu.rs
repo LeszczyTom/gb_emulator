@@ -1,4 +1,6 @@
-use std::collections::VecDeque;
+mod fifo;
+mod fetcher;
+
 use crate::gameboy::memory::Memory;
 
 #[derive(Debug)]
@@ -9,119 +11,13 @@ enum Mode {
     PixelFetcher,
 }
 
-enum Step {
-    ReadTileId,
-    ReadData0,
-    ReadData1,
-    Idle,
-}
-
-struct Fetcher {
-    step: Step,
-    tile_id: u8,
-    data0: u8,
-    data1: u8,
-    x: usize,
-}
-
-impl Fetcher {
-    fn new() -> Fetcher {
-        Fetcher {
-            step: Step::ReadTileId,
-            tile_id: 0,
-            data0: 0,
-            data1: 0,
-            x: 0,
-        }
-    }
-
-    fn cycle(&mut self, memory: &mut Memory, fifo: &mut VecDeque<(u8, u8)>) {
-        let scx = memory.get_scx();
-        let scy = memory.get_scy();
-        let x = ((scx / 8) + self.x as u8) & 0x1F;
-        let y = (memory.get_ly() + scy) & 255;
-        let row: u16 = y as u16 / 8;
-        let col = x as u16 ;
-
-        let offset = 0x8000 + self.tile_id as u16 * 16;
-        let addr = offset + (y as u16 % 8) * 2;
-        match self.step {
-            Step::Idle => {
-                if fifo.len() <= 7 {
-                    self.step = Step::ReadTileId;
-                    for i in 0..8 {
-                        let mut data = [0; 2];
-                        data[0] = self.data0 >> (7 - i) & 1;
-                        data[1] = self.data1 >> (7 - i) & 1;
-                        fifo.push_back(((data[1] << 1) | data[0], 0));
-                    }
-                }
-            }
-            Step::ReadTileId => {
-                self.tile_id = memory.read_byte(0x8000 + 0x1800 + (row * 32 + col)); // 0x1800 or 0x1C00
-                self.step = Step::ReadData0;
-            }
-            Step::ReadData0 => {
-                self.data0 = memory.read_byte(addr);
-                self.step = Step::ReadData1;
-            }
-            Step::ReadData1 => {
-                self.data1 = memory.read_byte(addr + 1);
-                self.x += 1;
-                self.step = Step::Idle;
-            }
-        }
-    }
-}
-
-struct FIFO {
-    fetcher: Fetcher,
-    data: VecDeque<(u8, u8)>, // (color, pallette) tuples. color: [00, 01, 10, 11] - pallette: [0, 1, 2, 3]
-    clock: bool,
-}
-
-impl FIFO {
-    fn new() -> FIFO {
-        FIFO {
-            fetcher: Fetcher::new(),
-            data:VecDeque::new(),
-            clock: false,
-        }
-    }
-
-    pub fn clear(&mut self) {
-        self.data.clear();
-        self.fetcher = Fetcher::new();
-        self.clock = false;
-    }
-
-    pub fn cycle(&mut self, memory: &mut Memory) -> Option<(u8, u8)> {
-        if self.clock { // 1Mhz
-            self.clock = false;
-            return self.push()
-        }
-        self.clock = true;
-        
-        self.fetcher.cycle(memory, &mut self.data);
-        self.push()
-    }
-
-    fn push(&mut self) -> Option<(u8, u8)> {
-        if self.data.len() <= 7 {
-            return None;
-        }
-
-        self.data.pop_front()
-    }
-}
-
 pub struct Ppu {
     mode: Mode,
     dots: u32,
     x: u8,
     clock: bool,
-    backgorund_fifo: FIFO,
-    _oam_fifo: FIFO,
+    backgorund_fifo: fifo::Fifo,
+    _oam_fifo: fifo::Fifo,
 }
 
 impl Ppu {
@@ -131,12 +27,12 @@ impl Ppu {
             dots: 0,
             x: 0,
             clock: false,
-            backgorund_fifo: FIFO::new(),
-            _oam_fifo: FIFO::new(),
+            backgorund_fifo: fifo::Fifo::new(),
+            _oam_fifo: fifo::Fifo::new(),
         }
     }
 
-    pub fn pixel_transfer(&mut self, memory: &mut Memory) -> Option<(u8, u8)> {
+    pub fn pixel_transfer(&mut self, memory: &mut Memory) -> Option<([u8; 4])> {
         self.backgorund_fifo.cycle(memory)
     }
 
@@ -186,16 +82,10 @@ impl Ppu {
                 let data = self.pixel_transfer(memory);
                 match data {
                     None => (),
-                    Some(i) => {
-                        let (color, _) = i;
-                        let a = match color {
-                            0 => [255, 255, 255, 255],
-                            1 => [0, 0, 0, 255],
-                            2 => [0, 0, 0, 255],
-                            3 => [0, 0, 0, 255],
-                            _ => panic!("Invalid color"),
-                        };
-                        draw_color_at_pos(a, self.x.into(), ly.into(), frame);
+                    Some(color) => {
+  
+                        
+                        draw_color_at_pos(color, self.x.into(), ly.into(), frame);
                         self.x += 1;
                     }
                 }
