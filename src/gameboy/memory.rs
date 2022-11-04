@@ -17,7 +17,7 @@ impl Memory {
             Ok(bytes) => bytes,
             Err(e) => panic!("Error: {}", e)
         }; 
-
+        
         let mut data = [0; MEM_SIZE];
         data[0..0x8000].copy_from_slice(&rom);
 
@@ -117,5 +117,9 @@ impl Memory {
         let start = 0x8000 + (index * 16);
         tile.copy_from_slice(&self.data[start..start+16]);
         tile
+    }
+
+    pub fn get_background_tile_id(&self, index: usize) -> u8 {
+        self.data[0x9800 + index]
     }
 }
