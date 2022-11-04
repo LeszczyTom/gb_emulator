@@ -7,5 +7,4 @@ edition = "2021"
 
 [dependencies]
 pixels = "0.9.0"
-winit = "0.26"
-game-loop = { version = "0.9.1", features = ["window"] }
+winit = "0.27.5"

@@ -41,5 +41,9 @@ pub mod gameboy {
                 self.ppu.cycle(frame, &mut self.memory);
             }
         }
+
+        pub fn get_memory(&self) -> &memory::Memory {
+            &self.memory
+        }
     }
 }

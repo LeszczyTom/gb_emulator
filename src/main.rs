@@ -1,76 +1,138 @@
+mod display;
+mod debug;
+
+use std::collections::HashMap;
+
+use display::Display;
 use gameboy::gameboy::GameBoy;
 
-use pixels:: {
-    Error,
-    Pixels,
-    SurfaceTexture,
+use winit::{
+    event::{ Event, WindowEvent },
+    event_loop::EventLoop, 
+    dpi::PhysicalPosition
 };
 
-use game_loop::game_loop;
-use game_loop::winit::event::{Event, WindowEvent};
-use game_loop::winit::event_loop::EventLoop;
-use game_loop::winit::window::WindowBuilder;
+use pixels::Error;
 
-use winit::dpi::LogicalSize;
+#[derive(Eq, Hash, PartialEq)]
+enum DisplayType {
+    GameBoy,
+    TileSetDebug,
+    BackgroundDebug
+}
 
 struct App {
     gameboy: GameBoy,
-    pixels: Pixels,
-    _paused: bool,
+    displays: HashMap<DisplayType, Display>
 }
 
-const FPS: u32 = 240;
-const WIDTH: u32 = 160;
-const HEIGHT: u32 = 144;
-const SCALE: f64 = 1.;
-
 fn main() -> Result<(), Error> {
-    let event_loop = EventLoop::new();
-    let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
-        let scaled_size = LogicalSize::new(WIDTH as f64 * SCALE, HEIGHT as f64 * SCALE);
-        WindowBuilder::new()
-            .with_title("GameBoy emulator")
-            .with_inner_size(scaled_size)
-            .with_min_inner_size(size)
-            .build(&event_loop)
-            .unwrap()
-    };
-    
-    let pixels = {
-        let window_size = window.inner_size();
-        let surface_texture = SurfaceTexture::new(window_size.width, window_size.height, &window);
-        Pixels::new(WIDTH, HEIGHT, surface_texture)?
-    };
-    
-    
-    let app = App {
+    let mut app = App {
         gameboy: GameBoy::new(),
-        pixels,
-        _paused: false,
+        displays: HashMap::new()
     };
 
-    game_loop(event_loop, window, app, FPS, 0.1, move |g| {
+    let event_loop = EventLoop::new();
 
-        g.game.gameboy.cycle(g.game.pixels.get_frame(), FPS);
+    app.displays.insert(
+        DisplayType::GameBoy,
+        Display::new(
+            160, 
+            144, 
+            3., 
+            144, 
+            "GameBoy emulator", 
+            PhysicalPosition::new(730, 300),
+            &event_loop
+        ));
+    
+    app.displays.insert(
+        DisplayType::TileSetDebug,
+        Display::new(
+            128, 
+            192, 
+            2., 
+            60, 
+            "TileSet Debug", 
+            PhysicalPosition::new(450, 300),
+            &event_loop
+        ));
+    
+    app.displays.insert(
+        DisplayType::BackgroundDebug,
+        Display::new(
+            256, 
+            256, 
+            2., 
+            60, 
+            "Background Debug", 
+            PhysicalPosition::new(1230, 300),
+            &event_loop
+        ));
 
-    }, move |g| {
-        if let Err(e) = g.game.pixels.render() {
-            println!("pixels.render() failed: {}", e);
-            g.exit();
-        }
-    }, |g, event| {
+    event_loop.run(move |event, _, control_flow| {
+        control_flow.set_poll();
+    
         match event {
-            Event::WindowEvent { event: WindowEvent::CloseRequested, .. } => {
-                g.exit();
-            },
-            Event::WindowEvent { 
-                window_id: _, 
-                event: WindowEvent::KeyboardInput { device_id: _, input, is_synthetic: _ } 
+            Event::WindowEvent {
+                event: WindowEvent::CloseRequested,
+                window_id
             } => {
-                println!("Keyboard input!: {:?}", input);
+                // Remove the display from the hashmap
+                app.displays.retain(|_, display| display.get_window().id() != window_id);
+
+                // If main window is closed, exit the program
+                match app.displays.get(&DisplayType::GameBoy) {
+                    Some(_) => (),
+                    None => control_flow.set_exit() // TODO: Panic everytime, might find a better way to do this
+                }
+
+                // If no more displays, exit
+                if app.displays.is_empty() {
+                    control_flow.set_exit();
+                }
             },
-            _ => {}
+            Event::WindowEvent {
+                event: WindowEvent::KeyboardInput { device_id: _, input, is_synthetic: _ }, 
+                ..
+            } => {
+                println!("Keyboard input: {:?}", input);
+            },
+            Event::MainEventsCleared => {
+                // Wait to redraw a frame to match the target frame rate.
+                let display = match app.displays.get_mut(&DisplayType::GameBoy) {
+                    Some(display) => display,
+                    None => panic!("No main display found")
+                };
+                if display.is_ready_to_render() {
+                    display.request_redraw();
+                }
+            },
+            Event::RedrawRequested(_) => {
+                // Redraw requested by the OS
+                for (display_type, display) in app.displays.iter_mut() {
+                    match display_type {
+                        DisplayType::GameBoy => {
+                            // update gameboy
+                            let fps = display.get_fps();
+                            app.gameboy.cycle(display.get_mut_pixels().get_frame(), fps);
+                        },
+                        DisplayType::TileSetDebug => {
+                            // update tileset debug
+                            debug::update_tileset_debug(&mut app.gameboy, display.get_mut_pixels().get_frame());
+                        },
+                        DisplayType::BackgroundDebug => {
+                            // update background debug
+                            debug::update_background_debug(&mut app.gameboy, display.get_mut_pixels().get_frame());
+                        }
+                    }
+                }
+
+                for display in app.displays.values_mut() {
+                    display.render();
+                }
+            },
+            _ => ()
         }
     });
 }
