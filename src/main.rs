@@ -8,7 +8,8 @@ use gameboy::gameboy::GameBoy;
 
 use winit::{
     event::{ Event, WindowEvent },
-    event_loop::EventLoop
+    event_loop::EventLoop, 
+    dpi::PhysicalPosition
 };
 
 use pixels::Error;
@@ -35,18 +36,39 @@ fn main() -> Result<(), Error> {
 
     app.displays.insert(
         DisplayType::GameBoy,
-        Display::new(160, 144, 3., 144, "GameBoy emulator", &event_loop)
-    );
+        Display::new(
+            160, 
+            144, 
+            3., 
+            144, 
+            "GameBoy emulator", 
+            PhysicalPosition::new(730, 300),
+            &event_loop
+        ));
     
     app.displays.insert(
         DisplayType::TileSetDebug,
-        Display::new(128, 192, 2., 60, "TileSet Debug", &event_loop)
-    );
+        Display::new(
+            128, 
+            192, 
+            2., 
+            60, 
+            "TileSet Debug", 
+            PhysicalPosition::new(450, 300),
+            &event_loop
+        ));
     
     app.displays.insert(
         DisplayType::BackgroundDebug,
-        Display::new(256, 256, 2., 60, "Background Debug", &event_loop)
-    );
+        Display::new(
+            256, 
+            256, 
+            2., 
+            60, 
+            "Background Debug", 
+            PhysicalPosition::new(1230, 300),
+            &event_loop
+        ));
 
     event_loop.run(move |event, _, control_flow| {
         control_flow.set_poll();

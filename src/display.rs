@@ -3,7 +3,7 @@ use std::time::Instant;
 use winit::{
     event_loop::EventLoop,
     window::{WindowBuilder, Window},
-    dpi::LogicalSize
+    dpi::{LogicalSize, PhysicalPosition}
 };
 
 use pixels:: {
@@ -22,7 +22,7 @@ pub struct Display {
 }
 
 impl Display {
-    pub fn new(width: u32, height: u32, scale: f64, fps: u32, title: &str, eventloop: &EventLoop<()>) -> Self {
+    pub fn new(width: u32, height: u32, scale: f64, fps: u32, title: &str, spawn_position: PhysicalPosition<u16>, eventloop: &EventLoop<()>) -> Self {
         let size = LogicalSize::new(width as f64, height as f64);
         let scaled_size = LogicalSize::new(width as f64 * scale, height as f64 * scale);
 
@@ -33,6 +33,7 @@ impl Display {
             .with_max_inner_size(scaled_size)
             .with_resizable(false)
             .with_maximized(false)
+            .with_position(spawn_position)
             .build(&eventloop)
             .unwrap();
 
