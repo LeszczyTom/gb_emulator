@@ -16,6 +16,5 @@ In the end, I want this emulator to pass all the Blargg's test.
 
 ## Dependencies
 
-* [winit](https://github.com/rust-windowing/winit): 0.26.0
+* [winit](https://github.com/rust-windowing/winit): 0.27.5
 * [pixels](https://github.com/parasyte/pixels): 0.9.0
-* [game-loop](https://github.com/tuzz/game-loop): 0.9.1
