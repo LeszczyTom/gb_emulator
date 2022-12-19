@@ -1,14 +1,18 @@
-use crate::gameboy::{ cpu::Cpu, memory::Memory };
-use crate::gameboy::cpu::Register;
-use crate::gameboy::cpu::RegisterPair::HL;
-use crate::gameboy::cpu::Flag::*;
+use crate::cpu::cpu::{
+    Cpu,
+    Register,
+    RegisterPair::HL,
+    Flag::*
+};
+use crate::memory::mmu::Mmu;
+
 
 /// Rotates the contents of operand m to the left, r and (HL) are used for operand m.
 /// ```rust
 /// //Examples: When C = 0x80, (HL) = 0x11, and CY = 0,
 /// //RL C ; C <- 0x00, Z <- 1, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x11);
@@ -47,7 +51,7 @@ pub fn rl_r(r: Register, cpu: &mut Cpu) -> u8 {
     8
 }
 
-pub fn rl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn rl_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let result = rl_m(memory.read_byte(cpu.get_rr(HL)), cpu);
     memory.write_byte(cpu.get_rr(HL), result);
 
@@ -59,7 +63,7 @@ pub fn rl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When A = 0x95 and CY = 1,
 /// //RLA ; A <- 0x2B, Z <- 0, N <- 0, H <- 0, C <- 1,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x17);
 /// # cpu.set_a(0x95);
@@ -87,7 +91,7 @@ pub fn rla(cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0x81 and CY = 0,
 /// //RRA ; A <- 0x40,  Z <- 0, N <- 0, H <- 0, CY <- 1 ,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x1f);
 /// # cpu.set_a(0x81);
@@ -115,7 +119,7 @@ pub fn rra(cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0x85 and CY = 0,
 /// //RLCA ; A <- 0x0b,  Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x07);
 /// # cpu.set_a(0x85);
@@ -141,7 +145,7 @@ pub fn rlca(cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0x3B and CY = 0,
 /// //RRCA ; A <- 0x9D, Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x0f);
 /// # cpu.set_a(0x3b);
@@ -180,7 +184,7 @@ fn rlc_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //Examples: When B = 0x85, and CY = 0,
 /// //RLC B ; B <- 0x0b, Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x00);
@@ -203,7 +207,7 @@ pub fn rlc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When (HL) = 0, and CY = 0,
 /// //RLC (HL) ; (HL) <- 0x00, Z <- 1 , N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x06);
@@ -215,7 +219,7 @@ pub fn rlc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0x00);
 /// assert_eq!(cpu.get_f(), 0x80);
 /// ```
-pub fn rlc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn rlc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = rlc_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);
@@ -240,7 +244,7 @@ fn rrc_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //Examples: When C = 1, CY = 0,
 /// //RRC C ; C <- 0x80, Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x09);
@@ -263,7 +267,7 @@ pub fn rrc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When (HL) = 0, CY = 0,
 /// //RRC (HL) ; (HL) <- 0, Z <- 1, N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x0e);
@@ -275,7 +279,7 @@ pub fn rrc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0x00);
 /// assert_eq!(cpu.get_f(), 0x80);
 /// ```
-pub fn rrc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn rrc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = rrc_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);
@@ -301,7 +305,7 @@ fn rr_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 1, CY = 0,
 /// //RR A ; A <- 0, Z <- 1, N <- 0, H 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x1f);
@@ -324,7 +328,7 @@ pub fn rr_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When (hl) = 0x8a, CY = 0,
 /// //RR (HL) ; (HL) <- 45h, Z <- 0, N <- 0, H w- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x1e);
@@ -336,7 +340,7 @@ pub fn rr_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0x45);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
-pub fn rr_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn rr_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = rr_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);
@@ -359,7 +363,7 @@ fn sla_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //Examples: When D = 80h, (HL) = FFh, and CY = 0,
 /// //SLA D ; D <- 0, Z <- 1, N <- 0, H <- 0,  CY <- 1 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x22);
@@ -381,7 +385,7 @@ pub fn sla_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When D = 80h, (HL) = FFh, and CY = 0,
 /// //SLA (HL) ; (HL) <- FEh, Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x26);
@@ -393,7 +397,7 @@ pub fn sla_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0xfe);
 /// assert_eq!(cpu.get_f(), 0x10);
 /// ```
-pub fn sla_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn sla_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = sla_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);
@@ -416,7 +420,7 @@ fn sra_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0x8A, (HL) = 0x01, and CY = 0,
 /// //SRA A ; A <- 0xC5, Z <- 0, N <- 0, H <- 0, CY <- 0,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x2f);
@@ -437,7 +441,7 @@ pub fn sra_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0x8A, (HL) = 0x01, and CY = 0,
 /// //SRA (HL) ; (HL) <- 0,  Z <- 1, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x2e);
@@ -449,7 +453,7 @@ pub fn sra_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0x00);
 /// assert_eq!(cpu.get_f(), 0x90);
 /// ```
-pub fn sra_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn sra_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = sra_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);
@@ -472,7 +476,7 @@ fn swap_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //xamples: When A = 0 and (HL) = 0xFO,
 /// //SWAP A ; A <- 0, Z <- 1 , N <- 0, H <- 0, CY <- 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x37);
@@ -494,7 +498,7 @@ pub fn swap_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 0 and (HL) = 0xFO,
 /// //SWAP (HL) ; (HL) <- 0x0f, Z <- 0, N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x36);
@@ -506,7 +510,7 @@ pub fn swap_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0x0f);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
-pub fn swap_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn swap_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = swap_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);
@@ -528,7 +532,7 @@ fn srl_m(value: u8, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 1, (HL) = 0xFF, CY = 0,
 /// //SRL A ; A <- 0, Z <- 1 , N <- 0 H <- 0, CY <- 1 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x3f);
@@ -550,7 +554,7 @@ pub fn srl_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 1, (HL) = 0xFF, CY = 0,
 /// //SRL (HL) ; (HL) <- 0x7F, Z <- 0, N <- 0, H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x3e);
@@ -562,7 +566,7 @@ pub fn srl_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0xff00), 0x7f);
 /// assert_eq!(cpu.get_f(), 0x10);
 /// ```
-pub fn srl_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn srl_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     let result = srl_m(value, cpu);
     memory.write_byte(cpu.get_hl(), result);

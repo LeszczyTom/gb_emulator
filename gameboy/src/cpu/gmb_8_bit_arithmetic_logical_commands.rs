@@ -1,14 +1,17 @@
-use crate::gameboy::{ cpu::Cpu, memory::Memory };
-use crate::gameboy::cpu::Register;
-use crate::gameboy::cpu::RegisterPair::HL;
-use crate::gameboy::cpu::Flag::*;
+use crate::cpu::cpu::{
+    Cpu,
+    Register,
+    RegisterPair::HL,
+    Flag::*
+};
+use crate::memory::mmu::Mmu;
 
 /// Adds the contents of operand s and CY to the contents of register A and stores the results in register A. r, n, and (HL) are used for operand s.
 /// ``` rust
 /// //Examples: When A = 0xE1, E = 0x0f, (HL) = 0x1e, and CY = 1 
 /// //ADC A, E ; A <- 0xf1, Z <- 0, H <- 1 , CY <- 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x8b);
 /// # cpu.set_a(0xe1);
@@ -58,7 +61,7 @@ pub fn adc_r(r: Register, cpu: &mut Cpu) -> u8 {
 }
 
 /// Adds the contents of operand (HL) and CY to the contents of register A and stores the results in register A.
-pub fn adc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn adc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     adc_s(value, cpu);
 
@@ -66,7 +69,7 @@ pub fn adc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 }
 
 /// Adds the contents of operand n and CY to the contents of register A and stores the results in register A.
-pub fn adc_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn adc_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     adc_s(cpu.read_n(memory), cpu);
 
     8
@@ -77,7 +80,7 @@ pub fn adc_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: When A = 0x3E, E = 0x3E, and (HL) = 0x40,
 /// //SUB E ; A <- 0x00, Z <-1, N <- 1, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x93);
 /// # cpu.set_a(0x3e);
@@ -121,7 +124,7 @@ pub fn sub_r(r: Register, cpu: &mut Cpu) -> u8 {
 }
 
 /// Subtracts the contents of operand (HL) from the contents of register A and stores the results in register A.
-pub fn sub_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn sub_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     sub_s(value, cpu);
 
@@ -129,7 +132,7 @@ pub fn sub_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 }
 
 /// Subtracts the contents of operand n from the contents of register A and stores the results in register A.
-pub fn sub_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn sub_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     sub_s(cpu.read_n(memory), cpu);
 
     8
@@ -140,7 +143,7 @@ pub fn sub_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: When A = 0x3C, B = 0x2F, and (HL) = 0x40,
 /// //CP B ; Z <- 0, N <- 1, H <- 1, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x100, 0xb8);
 /// # cpu.set_pc(0x100);
@@ -179,7 +182,7 @@ pub fn cp_r(r: Register, cpu: &mut Cpu) -> u8 {
 }
 
 /// Compares the contents of operand (HL) and register A and sets the flag if they are equal.
-pub fn cp_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn cp_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     cp_s(value, cpu);
 
@@ -187,7 +190,7 @@ pub fn cp_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 }
 
 /// Compares the contents of operand n and register A and sets the flag if they are equal.
-pub fn cp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn cp_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     cp_s(cpu.read_n(memory), cpu);
 
     8
@@ -200,7 +203,7 @@ pub fn cp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When A = 0xFF and (HL) = 0x8A
 /// //XOR A ; A <- 0x00, Z <- 1 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x100, 0xaf);
 /// # cpu.set_pc(0x100);
@@ -247,7 +250,7 @@ pub fn xor_r(r: Register, cpu: &mut Cpu) -> u8 {
 
 /// Takes the logical exclusive-OR for each bit of the contents of operand (HL) and register A.
 /// And stores the results in register A.
-pub fn xor_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn xor_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     xor_s(value, cpu);
 
@@ -256,7 +259,7 @@ pub fn xor_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 
 /// Takes the logical exclusive-OR for each bit of the contents of operand n and register A.
 /// And stores the results in register A.
-pub fn xor_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn xor_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     xor_s(cpu.read_n(memory), cpu);
 
     8
@@ -267,7 +270,7 @@ pub fn xor_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When A = 0x35,
 /// //CPL ; A <- 0xCA
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x100, 0x2f);
 /// # cpu.set_pc(0x100);
@@ -289,7 +292,7 @@ pub fn cpl(cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0xFF,
 /// //INC A ; A <- 0, Z <- 1, N <- 0, H <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x100, 0x3c);
 /// # cpu.set_pc(0x100);
@@ -325,7 +328,7 @@ fn add_s(value: u8, cpu: &mut Cpu) {
 /// //Example: When A = 0x3C and (HL) = 0x12,
 /// //ADD A, (HL) ; A <- 0x4E, Z <- 0, N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x100, 0x86);
 /// # cpu.set_pc(0x100);
@@ -337,7 +340,7 @@ fn add_s(value: u8, cpu: &mut Cpu) {
 /// assert_eq!(cpu.get_a(), 0x4e);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
-pub fn add_a_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn add_a_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     add_s(value, cpu);
 
@@ -349,7 +352,7 @@ pub fn add_a_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When A = 0x3A and B = 0xC6,
 /// //ADD A, B ; A <- 0, Z <- 1 , N <- 0, H <- 1 , CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x80);
 /// # cpu.set_a(0x3a);
@@ -370,7 +373,7 @@ pub fn add_a_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Example: When A = 0x3C,
 /// //  ADD A, 0xFF ; A <- 0x3B, Z <- 0, N <- 0, H <- 1, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xc6);
 /// # memory.write_byte(0x01, 0xff);
@@ -379,7 +382,7 @@ pub fn add_a_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_a(), 0x3b);
 /// assert_eq!(cpu.get_f(), 0x30);
 /// ```
-pub fn add_a_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn add_a_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = cpu.read_n(memory);
     add_s(value, cpu);
 
@@ -391,7 +394,7 @@ pub fn add_a_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When HL = 0x1FF and (0x1FF) = 0x56,
 /// //LD A, (HLI) ; A <- 0x56, HL <- 0x200
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x2a);
 /// # cpu.set_h(0x01);
@@ -402,7 +405,7 @@ pub fn add_a_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_h(), 0x02);
 /// assert_eq!(cpu.get_l(), 0x00);
 /// ```
-pub fn ld_a_hli(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn ld_a_hli(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     cpu.set_a(value);
     cpu.set_rr(HL, cpu.get_rr(HL).wrapping_add(1));
@@ -427,7 +430,7 @@ fn sbc_s(value: u8, cpu: &mut Cpu) {
 /// //Examples: When A = 0x3B, H = 0x2A, and CY = 1
 /// //SBC A, H ; A <- 1 0h, Z <- 0, N <- 1, H <- 0,CY <— 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x9c);
 /// # cpu.set_f(0x10);
@@ -449,7 +452,7 @@ pub fn sbc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 0x3B, (HL) = 0x4F, and CY = 1
 /// //SBC A, (HL) ; A <- 0xEB, Z <- 0, N <- 1, H <- 1 , CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x9e);
 /// # cpu.set_f(0x10);
@@ -461,7 +464,7 @@ pub fn sbc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_a(), 0xeb);
 /// assert_eq!(cpu.get_f(), 0x70);
 /// 
-pub fn sbc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn sbc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     sbc_s(value, cpu);
 
@@ -473,7 +476,7 @@ pub fn sbc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: When A = 0x3B, and CY = 1
 /// //SBC A, 0x3A ; A <- 0x00, Z <- 1 , N <- 1, H <- 0, CY <- 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xde);
 /// # memory.write_byte(0x01, 0x3a);
@@ -483,7 +486,7 @@ pub fn sbc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_a(), 0x00);
 /// assert_eq!(cpu.get_f(), 0xC0);
 /// ```
-pub fn sbc_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn sbc_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = cpu.read_n(memory);
     sbc_s(value, cpu);
 
@@ -506,7 +509,7 @@ fn and_s(value: u8, cpu: &mut Cpu) {
 /// //Examples: When A = 0x5A, L = 0x3F
 /// //AND L ; A <- 0x1A, Z <- 0, N <- 0, H <- 1, CY <— 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xa5);
 /// # cpu.set_a(0x5a);
@@ -527,7 +530,7 @@ pub fn and_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 0x5A
 /// //AND 0x38 ; A <- 0x18, Z <- 0, N <- 0, H <- 1, CY <- 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xe6);
 /// # memory.write_byte(0x01, 0x38);
@@ -536,7 +539,7 @@ pub fn and_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_a(), 0x18);
 /// assert_eq!(cpu.get_f(), 0x20);
 /// ```
-pub fn and_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn and_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = cpu.read_n(memory);
     and_s(value, cpu);
 
@@ -548,7 +551,7 @@ pub fn and_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: When A = 0x5A, (HL) = 0x00
 /// //AND (HL) ; A <- 0x00, Z <- 1, N <- 0, H <- 1, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new(); 
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xa6);
 /// # cpu.set_a(0x5a);
@@ -559,7 +562,7 @@ pub fn and_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_a(), 0x00);
 /// assert_eq!(cpu.get_f(), 0xa0);
 /// ```
-pub fn and_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn and_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     and_s(value, cpu);
 
@@ -582,7 +585,7 @@ fn or_s(value: u8, cpu: &mut Cpu) {
 /// //Examples: When A = 0x5A
 /// //OR A ; A <— 0x5A, Z <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xb7); 
 /// # cpu.set_a(0x5a);
@@ -602,7 +605,7 @@ pub fn or_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// //Examples: When A = 0x5A
 /// //OR 0x03 ; A <- 0x5B, Z <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xf6);
 /// # memory.write_byte(0x01, 0x03);
@@ -611,7 +614,7 @@ pub fn or_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_a(), 0x5b);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
-pub fn or_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn or_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = cpu.read_n(memory);
     or_s(value, cpu);
 
@@ -623,7 +626,7 @@ pub fn or_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: When A = 0x5A, (HL) = 0x0f
 /// //OR (HL) ; A <- 0x5F, Z <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xb6);
 /// # cpu.set_a(0x5a);
@@ -634,7 +637,7 @@ pub fn or_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_a(), 0x5f);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
-pub fn or_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn or_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
     or_s(value, cpu);
 
@@ -646,7 +649,7 @@ pub fn or_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When B = 0x01,
 /// //DEC B ; B <- 0, Z <- 1, N <— 1 H <- 0,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x05);
 /// # cpu.set_b(0x01);

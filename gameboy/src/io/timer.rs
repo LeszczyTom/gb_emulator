@@ -1,4 +1,4 @@
-use crate::gameboy::memory::Memory;
+use crate::memory::mmu::Mmu;
 
 pub struct Timer {
     pub counter: u16,
@@ -11,7 +11,7 @@ impl Timer {
         }
     }
 
-    pub fn tick(&mut self, memory: &mut Memory) {
+    pub fn tick(&mut self, memory: &mut Mmu) {
         let old_div = u16::from_be_bytes([memory.read_byte(0xFF04), memory.read_byte(0xFF03)]);
 
         memory.increment_divider();
@@ -44,7 +44,7 @@ impl Timer {
 
 #[test]
 fn test_tick() {
-    let mut memory = Memory::new();
+    let mut memory = Mmu::new();
     let mut timer = Timer::new();
 
     memory.write_byte(0xFF07, 0x4); // Enable timer, set rate to 1024

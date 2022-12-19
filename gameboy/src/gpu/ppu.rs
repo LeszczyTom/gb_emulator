@@ -1,7 +1,5 @@
-mod fifo;
-mod fetcher;
-
-use crate::gameboy::memory::Memory;
+use crate::memory::mmu::Mmu;
+use crate::gpu::fifo::Fifo;
 
 #[derive(Debug)]
 enum Mode {
@@ -16,8 +14,8 @@ pub struct Ppu {
     dots: u32,
     x: u8,
     clock: bool,
-    backgorund_fifo: fifo::Fifo,
-    _oam_fifo: fifo::Fifo,
+    backgorund_fifo: Fifo,
+    _oam_fifo: Fifo,
 }
 
 impl Ppu {
@@ -27,16 +25,16 @@ impl Ppu {
             dots: 0,
             x: 0,
             clock: false,
-            backgorund_fifo: fifo::Fifo::new(),
-            _oam_fifo: fifo::Fifo::new(),
+            backgorund_fifo: Fifo::new(),
+            _oam_fifo: Fifo::new(),
         }
     }
 
-    pub fn pixel_transfer(&mut self, memory: &mut Memory) -> Option<([u8; 4])> {
+    pub fn pixel_transfer(&mut self, memory: &mut Mmu) -> Option<([u8; 4])> {
         self.backgorund_fifo.cycle(memory)
     }
 
-    pub fn cycle(&mut self, frame: &mut [u8], memory: &mut Memory) {
+    pub fn cycle(&mut self, frame: &mut [u8], memory: &mut Mmu) {
         if self.clock { // 2MHz
             self.clock = false;
         }
@@ -83,8 +81,6 @@ impl Ppu {
                 match data {
                     None => (),
                     Some(color) => {
-  
-                        
                         draw_color_at_pos(color, self.x.into(), ly.into(), frame);
                         self.x += 1;
                     }
@@ -109,7 +105,7 @@ impl Ppu {
 }
 
 pub fn draw_color_at_pos(color: [u8;4], x: usize, y: usize, frame: &mut [u8]) {
-    let index = (y * super::WIDTH as usize + x) * 4;
+    let index = (y * 160 + x) * 4;
     frame[index] = color[0];        // R
     frame[index + 1] = color[1];    // G
     frame[index + 2] = color[2];    // B

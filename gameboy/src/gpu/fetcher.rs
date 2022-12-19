@@ -1,5 +1,4 @@
-
-use crate::gameboy::memory::Memory;
+use crate::memory::mmu::Mmu;
 use std::collections::VecDeque;
 
 const COLORS: [[u8; 4]; 4] = [
@@ -35,7 +34,7 @@ impl Fetcher {
         }
     }
 
-    pub fn cycle(&mut self, memory: &mut Memory, fifo: &mut VecDeque<([u8; 4])>) {
+    pub fn cycle(&mut self, memory: &mut Mmu, fifo: &mut VecDeque<([u8; 4])>) {
         let scx = memory.get_scx();
         let scy = memory.get_scy();
         let x = ((scx / 8) + self.x as u8) & 0x1F;

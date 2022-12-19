@@ -1,15 +1,17 @@
-use crate::gameboy::cpu::Cpu;
-use crate::gameboy::cpu::Memory;
-use crate::gameboy::cpu::RegisterPair;
-use crate::gameboy::cpu::Flag::*;
-use crate::gameboy::cpu::RegisterPair::*;
+use crate::cpu::cpu::{
+    Cpu,
+    RegisterPair::{ self, * },
+    Flag::*,
+};
+
+use crate::memory::mmu::Mmu;
 
 /// Increments the contents of register pair rr by 1.
 /// ```rust
 /// //Example: When DE = 0x235f
 /// //INC DE ; DE <- 0x2360
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x13);
 /// # cpu.set_d(0x23);
@@ -29,7 +31,7 @@ pub fn inc_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// //Example: When DE = 0x235F,
 /// //DEC DE ; DE <- 0x235E
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x1B);
 /// # cpu.set_d(0x23);
@@ -49,7 +51,7 @@ pub fn dec_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// //Example: When HL = 0x8A23, BC = 0x0605,
 /// //ADD HL, BC ; HL <- 0x9028, N <- 0, H <- 1 , CY <- 0 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x09);
 /// # cpu.set_h(0x8a);
@@ -86,7 +88,7 @@ pub fn add_hl_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// //Example: When (HL) = 0x50,
 /// //INC (HL) ; (HL) <- 0x51 , Z <- 0, N <- 0, H <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x34);
 /// # cpu.set_h(0x10);
@@ -96,7 +98,7 @@ pub fn add_hl_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0x1000), 0x51);
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
-pub fn inc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn inc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     memory.write_byte(cpu.get_hl(), value.wrapping_add(1));
 
@@ -112,7 +114,7 @@ pub fn inc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When (HL) = 0x00,
 /// //DEC (HL) ; (HL) <- 0xFF, Z <- 0, N <- 1, H <- 1 
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x35);
 /// # cpu.set_h(0x10);
@@ -122,7 +124,7 @@ pub fn inc_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(memory.read_byte(0x1000), 0xFF);
 /// assert_eq!(cpu.get_f(), 0x60);
 /// ```
-pub fn dec_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn dec_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     memory.write_byte(cpu.get_hl(), value.wrapping_sub(1));
 
@@ -138,7 +140,7 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When SP = 0xFFF8,
 /// //ADD SP, 2 ; SP <- 0xFFFA, Z <- 0,  N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xe8);
 /// # memory.write_byte(0x01, 0x02);
@@ -156,7 +158,7 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_sp(), 0xfff6);
 /// assert_eq!(cpu.get_f(), 0x30);
 /// ```
-pub fn add_sp_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn add_sp_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let n = cpu.read_n(memory) as i8 as u16;
     let sp = cpu.get_sp();
     let result = cpu.sp.wrapping_add(n);

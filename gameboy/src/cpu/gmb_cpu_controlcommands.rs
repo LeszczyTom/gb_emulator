@@ -1,22 +1,23 @@
-use crate::gameboy::cpu::Cpu;
-use crate::gameboy::memory::Memory;
-use crate::gameboy::cpu::Flag::*;
-
-use super::RegisterPair;
-use super::gmb_16_bit_loadcommands::push_rr;
+use crate::cpu::cpu::{
+    Cpu,
+    Flag::*,
+    RegisterPair
+};
+use crate::memory::mmu::Mmu;
+use crate::cpu::gmb_16_bit_loadcommands::push_rr;
 
 /// Sets the interrupt master enable flag and enables maskable interrupts.
 /// This instruction can be used in an interrupt routine to enable higher-order interrupts.
 /// ``` rust
 ///     //EI ; IME <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xfb);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_ime(), true);
 /// ```
-pub fn ei(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn ei(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     cpu.ime = true;
 
     memory.write_byte(0xFFFF, 0x1f);
@@ -38,7 +39,7 @@ pub fn stop() ->u8{
 /// //ADD A, B ; A <- 0x7D, N <- 0
 /// //DAA ; A <- 0x7D + 0x06 (0x83), CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # use gameboy::gameboy::cpu::Flag::Subtract;
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_a(0x45);
@@ -99,7 +100,7 @@ pub fn scf(cpu: &mut Cpu) -> u8 {
 /// //Example: When CY = 1,
 /// //CCF ; CY 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # use gameboy::gameboy::cpu::Flag::Carry;
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_flag(Carry, true);
@@ -125,13 +126,13 @@ pub fn halt(cpu: &mut Cpu) -> u8 {
 }
 
 /// Resets the interrupt master enable flag and prohibits maskable interrupts.
-pub fn di(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn di(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     cpu.ime = false;
     memory.write_byte(0xFFFF, 0x00);
     4
 }
 
-pub fn handle_interrupts(cpu: &mut Cpu, memory: &mut Memory) -> bool {
+pub fn handle_interrupts(cpu: &mut Cpu, memory: &mut Mmu) -> bool {
     let interupt_enable = memory.read_byte(0xffff);
     let interupt_flag = memory.read_byte(0xff0f);
         

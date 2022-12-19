@@ -1,12 +1,12 @@
 const MEM_SIZE: usize = 0x10000;
 
-pub struct Memory {
+pub struct Mmu {
     data: [u8; MEM_SIZE],
     bios: [u8; 0x100],
     bios_enabled: bool,
 }
 
-impl Memory {
+impl Mmu {
     pub fn new() -> Self {
         let bios = match std::fs::read("resources/bios.bin") {
             Ok(bytes) => bytes,

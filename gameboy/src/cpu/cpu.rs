@@ -1,14 +1,4 @@
-mod gmb_8_bit_loadcommands;
-mod gmb_16_bit_loadcommands;
-mod gmb_8_bit_arithmetic_logical_commands;
-mod gmb_16_bit_arithmetic_logical_commands;
-mod gmb_rotate_and_shift_commands;
-mod gmb_singlebit_operation_commands;
-mod gmb_cpu_controlcommands;
-mod gmb_jumpcommands;
-
-use crate::gameboy::memory::Memory;
-use crate::gameboy::cpu::{ 
+use crate::cpu::{
     gmb_8_bit_loadcommands::*, 
     gmb_16_bit_loadcommands::*,
     gmb_8_bit_arithmetic_logical_commands::*,
@@ -18,6 +8,9 @@ use crate::gameboy::cpu::{
     gmb_jumpcommands::*,
     gmb_cpu_controlcommands::*,
 };
+
+use crate::memory::mmu::Mmu;
+
 use Register::*;
 use RegisterPair::*;
 use Flag::*;
@@ -54,18 +47,18 @@ pub enum Flag {
 }
 
 pub struct Cpu {
-    a: u8,
-    f: u8,
-    b: u8,
-    c: u8,
-    d: u8,
-    e: u8,
-    h: u8,
-    l: u8,
-    sp: u16,
-    pc: u16,
-    ime: bool,
-    halt: bool,
+    pub a: u8,
+    pub f: u8,
+    pub b: u8,
+    pub c: u8,
+    pub d: u8,
+    pub e: u8,
+    pub h: u8,
+    pub l: u8,
+    pub sp: u16,
+    pub pc: u16,
+    pub ime: bool,
+    pub halt: bool,
 }
 
 impl Cpu {
@@ -206,7 +199,7 @@ impl Cpu {
         }
     }
 
-    pub fn get_halt(&mut self, memory: &mut Memory) -> bool {
+    pub fn get_halt(&mut self, memory: &mut Mmu) -> bool {
         if memory.read_byte(0xFF0F) & memory.read_byte(0xFFFF) != 0 {
             self.halt = false;
         }
@@ -223,25 +216,25 @@ impl Cpu {
         self.halt = value;
     }
 
-    fn read_n(&mut self, memory: &mut Memory) -> u8 {
+    pub fn read_n(&mut self, memory: &mut Mmu) -> u8 {
         let value = memory.read_byte(self.pc);
         self.pc = self.pc.wrapping_add(1);
         value
     }
 
-    fn read_nn(&mut self, memory: &mut Memory) -> u16 {
+    pub fn read_nn(&mut self, memory: &mut Mmu) -> u16 {
         let low = self.read_n(memory);
         let high = self.read_n(memory);
         ((high as u16) << 8) | low as u16
     }
 
-    pub fn fetch_opcode(&mut self, memory: &mut Memory) -> u8 {
+    pub fn fetch_opcode(&mut self, memory: &mut Mmu) -> u8 {
         let opcode = memory.read_byte(self.pc);
         self.pc = self.pc.wrapping_add(1);
         opcode
     }
 
-    pub fn cycle(&mut self, memory: &mut Memory) -> u8 {
+    pub fn cycle(&mut self, memory: &mut Mmu) -> u8 {
         if self.ime && handle_interrupts(self, memory) {
             return 20;
         }
@@ -250,7 +243,7 @@ impl Cpu {
         self.exectute(opcode, memory)
     }
 
-    fn exectute(&mut self, opcode: u8, memory: &mut Memory) -> u8 {
+    fn exectute(&mut self, opcode: u8, memory: &mut Mmu) -> u8 {
         match opcode {
             0x00 => 4,
             0x01 => ld_rr_nn(BC, self, memory),
@@ -526,7 +519,7 @@ impl Cpu {
         }
     }
 
-    fn cb_prefix(&mut self, memory: &mut Memory) -> u8 {
+    fn cb_prefix(&mut self, memory: &mut Mmu) -> u8 {
         let opcode = self.fetch_opcode(memory);
         match opcode {
             0x00 => rlc_r(B, self),

@@ -1,8 +1,10 @@
-use crate::gameboy::cpu::Cpu;
-use crate::gameboy::memory::Memory;
-use crate::gameboy::cpu::Register;
-use crate::gameboy::cpu::RegisterPair::HL;
-use crate::gameboy::cpu::Flag::*;
+use crate::cpu::cpu::{
+    Cpu,
+    Register,
+    RegisterPair::HL,
+    Flag::*
+};
+use crate::memory::mmu::Mmu;
 
 /// Copies the complement of the contents of the specified bit in register r to the Z flag of the program status word (PSW).
 /// 
@@ -10,7 +12,7 @@ use crate::gameboy::cpu::Flag::*;
 /// //Examples: When A = 0x80 and L = 0xEF
 /// //BIT 7, A ; Z <- 0, N <- 0, H <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x7f);
@@ -40,7 +42,7 @@ pub fn bit_r(r: Register ,b: u8, cpu: &mut Cpu) -> u8 {
 /// //Examples: When (HL) = 0xFE,
 /// //BIT 0, (HL) ; Z <- 1, N <- 0, H <- 1,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x46);
@@ -58,7 +60,7 @@ pub fn bit_r(r: Register ,b: u8, cpu: &mut Cpu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_f(), 0x20);
 /// ```
-pub fn bit_hl(b: u8, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn bit_hl(b: u8, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 
     cpu.set_flag(Zero, memory.read_byte(cpu.get_rr(HL)) & (1 << b) == 0);
     cpu.set_flag(Subtract, false);
@@ -72,7 +74,7 @@ pub fn bit_hl(b: u8, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When A = 0x80 and L = 0x3B,
 /// //RES 7, A ; A <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0xbf);
@@ -99,7 +101,7 @@ pub fn res_r(r: Register, bit: u8, cpu: &mut Cpu) -> u8 {
 /// //Example: When 0xFF is the memory contents specified by H and L,
 /// //RES 3, (HL) ; (HL) <- 0xF7
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0x9e);
@@ -109,7 +111,7 @@ pub fn res_r(r: Register, bit: u8, cpu: &mut Cpu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(memory.read_byte(0x1000), 0xf7);
 /// ```
-pub fn res_hl(bit: u8, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn res_hl(bit: u8, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     memory.write_byte(cpu.get_hl(),  value & !(1 << bit));
 
@@ -121,7 +123,7 @@ pub fn res_hl(bit: u8, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When A = 0x80 and L = 0x3B,
 /// //SET 3, A ; A <- 0x84
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0xdf);
@@ -148,7 +150,7 @@ pub fn set_r(r: Register, bit: u8, cpu: &mut Cpu) -> u8 {
 /// //Example: When 0x00 is the memory contents specified by H and L,
 /// //SET 3, (HL) ; (HL) <- 0x08
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0xcb);
 /// # memory.write_byte(0x01, 0xde);
@@ -158,7 +160,7 @@ pub fn set_r(r: Register, bit: u8, cpu: &mut Cpu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(memory.read_byte(0x1000), 0x08);
 /// ```
-pub fn set_hl(bit: u8, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn set_hl(bit: u8, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_hl());
     memory.write_byte(cpu.get_hl(),  value | (1 << bit));
 

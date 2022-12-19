@@ -1,8 +1,6 @@
-
+use crate::memory::mmu::Mmu;
+use crate::gpu::fetcher::Fetcher;
 use std::collections::VecDeque;
-
-use crate::gameboy::memory::Memory;
-use crate::gameboy::ppu::fetcher::Fetcher;
 
 pub struct Fifo {
     fetcher: Fetcher,
@@ -25,7 +23,7 @@ impl Fifo {
         self.clock = false;
     }
 
-    pub fn cycle(&mut self, memory: &mut Memory) -> Option<([u8; 4])> {
+    pub fn cycle(&mut self, memory: &mut Mmu) -> Option<([u8; 4])> {
         if self.clock { // 1Mhz
             self.clock = false;
             return self.push()

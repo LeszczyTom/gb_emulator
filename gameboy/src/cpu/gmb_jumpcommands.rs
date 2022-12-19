@@ -1,13 +1,17 @@
-use crate::gameboy::{ cpu::Cpu, memory::Memory };
-use crate::gameboy::cpu::gmb_16_bit_loadcommands::{ push_rr, pop_rr };
-use crate::gameboy::cpu::RegisterPair::PC;
-use crate::gameboy::cpu::Flag;
+use crate::cpu::cpu::{
+    Cpu,
+    RegisterPair::PC,
+    Flag
+};
+use crate::cpu::gmb_16_bit_loadcommands::{ push_rr, pop_rr};
+use crate::memory::mmu::Mmu;
+
 
 /// Jumps -127 to +129 steps from the current address.
 /// ``` rust
 /// //JR NZ, 0x05 ; PC <- PC + 0x05
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x00, 0x20);
 /// # memory.write_byte(0x01, 0x05);
@@ -23,7 +27,7 @@ use crate::gameboy::cpu::Flag;
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x082);
 /// ```
-pub fn jr_cc_n(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn jr_cc_n(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let condition = cpu.get_flag(condition);
     let n = cpu.read_n(memory) as i8;
     let result = cpu.pc.wrapping_add(n as u16);
@@ -37,7 +41,7 @@ pub fn jr_cc_n(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     
 }
 
-pub fn jr_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn jr_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let n = cpu.read_n(memory) as i8;
     let pc = cpu.pc;
     cpu.pc = pc.wrapping_add(n as u16);
@@ -51,7 +55,7 @@ pub fn jr_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: When PC = 0x8000 and SP = 0xFFFE,
 /// //CALL 0x1234; (0xFFDH) <- 0x80, (0xFFCH) <- 0x03, SP <- 0xFFCH, PC <- 0x1234
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x8000, 0xcd);
 /// # cpu.set_pc(0x8000);
@@ -64,7 +68,7 @@ pub fn jr_n(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(cpu.get_sp(), 0xfffc);
 /// assert_eq!(cpu.get_pc(), 0x1234);
 /// ```
-pub fn call_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn call_nn(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let addr = cpu.read_nn(memory);
     push_rr(PC, cpu, memory);
     cpu.pc = addr;
@@ -77,7 +81,7 @@ pub fn call_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //CALL 0x9000; PC = 0x9000
 /// //RET ; Returns to address 0x8003
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x8000, 0xcd);
 /// # memory.write_byte(0x8001, 0x00);
@@ -89,7 +93,7 @@ pub fn call_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x8003);
 /// ```
-pub fn ret(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn ret(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     pop_rr(PC, cpu, memory);
 
     16
@@ -103,7 +107,7 @@ pub fn ret(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //CP 0x00
 /// //RET Z ; Returns to address 0x8003 if Z = 1, Moves to next instruction after 2 cycles if Z = 0.
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_pc(0x8000);
 /// # memory.write_byte(0x8000, 0xcd);
@@ -127,7 +131,7 @@ pub fn ret(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x9003);
 /// ```
-pub fn ret_cc(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn ret_cc(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     if cpu.get_flag(condition) {
         pop_rr(PC, cpu, memory);
         20
@@ -140,7 +144,7 @@ pub fn ret_cc(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// ```rust
 /// //Example: JP 0x8000 ; Jump to 0x8000.
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # memory.write_byte(0x0, 0xc3);
 /// # memory.write_byte(0x1, 0x00);
@@ -148,7 +152,7 @@ pub fn ret_cc(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x8000);
 /// ```
-pub fn jp_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn jp_nn(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let addr = cpu.read_nn(memory);
     cpu.pc = addr;
 
@@ -160,7 +164,7 @@ pub fn jp_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When Z = 1 and C = 0, 
 /// //JP NZ, 0x8000; Moves to next instruction after 3 cycles
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_f(0x80);
 /// # memory.write_byte(0x0, 0xc2);
@@ -187,7 +191,7 @@ pub fn jp_nn(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x8000);
 /// ```
-pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     if cpu.get_flag(condition) {
         jp_nn(cpu, memory)
     } else {
@@ -202,7 +206,7 @@ pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Examples: WhenZ = 1, PC = 0x7ffc
 /// //CALL NZ, 0x1234; Moves to next instruction after 3 cycles
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_pc(0x7ffc);
 /// # cpu.set_f(0x80);
@@ -223,7 +227,7 @@ pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(memory.read_byte(cpu.get_sp()), 0x03);
 /// assert_eq!(memory.read_byte(cpu.get_sp() + 1), 0x80);
 /// ``` 
-pub fn call_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn call_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     if cpu.get_flag(condition) {
         call_nn(cpu, memory)
     } else {
@@ -232,7 +236,7 @@ pub fn call_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
     }
 }
 
-pub fn reti(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn reti(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     ret(cpu, memory);
     cpu.ime = true;
     16
@@ -242,7 +246,7 @@ pub fn reti(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// ```rust
 /// //Example: when PC = 0x8000, RST 0x0008 ; Pushes 0x8001 to the stack and jumps to 0x0008
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_pc(0x8000);
 /// # memory.write_byte(0x8000, 0xcf);
@@ -251,7 +255,7 @@ pub fn reti(cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// assert_eq!(memory.read_byte(cpu.get_sp()), 0x01);
 /// assert_eq!(memory.read_byte(cpu.get_sp() + 1), 0x80);
 /// ```
-pub fn rst(addr: u16, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
+pub fn rst(addr: u16, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     push_rr(PC, cpu, memory);
     cpu.pc = addr;
 
@@ -263,7 +267,7 @@ pub fn rst(addr: u16, cpu: &mut Cpu, memory: &mut Memory) -> u8 {
 /// //Example: When HL = 0x8000,
 /// //JP (HL) ; Jumps to 0x8000.
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
-/// # let mut memory = gameboy::gameboy::memory::Memory::new();
+/// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
 /// # cpu.set_h(0x80);
 /// # cpu.set_l(0x00);
