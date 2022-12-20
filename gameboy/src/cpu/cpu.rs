@@ -24,7 +24,7 @@ pub enum Register {
     E,
     H,
     L,
-    _F,
+    F,
 }
 
 #[derive(Clone, PartialEq)]
@@ -88,7 +88,7 @@ impl Cpu {
             E => self.e,
             H => self.h,
             L => self.l,
-            _F => self.f,
+            F => self.f,
         }
     }
 
@@ -101,7 +101,7 @@ impl Cpu {
             E => self.e = value,
             H => self.h = value,
             L => self.l = value,
-            _F => self.f = value,
+            F => self.f = value,
         }
     }
 
