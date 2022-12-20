@@ -1,6 +1,6 @@
 use crate::cpu::cpu::{
     Cpu,
-    RegisterPair,
+    RegisterPair::{ self, HL },
     Flag::*
 };
 
@@ -75,7 +75,7 @@ pub fn pop_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 
     cpu.set_rr(rr, u16::from_be_bytes([high, low]));
     
-    cpu.set_f(cpu.get_f() & 0xf0);
+    cpu.f &= 0xF0;
     12
 }
 
@@ -140,6 +140,6 @@ pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 
 /// Load the contents of register pair HL in stack pointer SP.
 pub fn ld_sp_hl(cpu: &mut Cpu) -> u8 {
-    cpu.sp = cpu.get_hl();
+    cpu.sp = cpu.get_rr(HL);
     8
 }

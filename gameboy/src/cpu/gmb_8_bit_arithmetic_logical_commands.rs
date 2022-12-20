@@ -407,7 +407,7 @@ pub fn add_a_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// ```
 pub fn ld_a_hli(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let value = memory.read_byte(cpu.get_rr(HL));
-    cpu.set_a(value);
+    cpu.a = value;
     cpu.set_rr(HL, cpu.get_rr(HL).wrapping_add(1));
 
     8

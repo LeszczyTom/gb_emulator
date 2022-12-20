@@ -1,6 +1,6 @@
 use crate::cpu::cpu::{
     Cpu,
-    RegisterPair::PC,
+    RegisterPair::{ PC, HL },
     Flag
 };
 use crate::cpu::gmb_16_bit_loadcommands::{ push_rr, pop_rr};
@@ -276,7 +276,7 @@ pub fn rst(addr: u16, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// assert_eq!(cpu.get_pc(), 0x8000);
 /// ```
 pub fn jp_hl(cpu: &mut Cpu) -> u8 {
-    cpu.pc = cpu.get_hl();
+    cpu.pc = cpu.get_rr(HL);
 
     4
 }

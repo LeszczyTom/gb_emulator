@@ -99,8 +99,8 @@ pub fn add_hl_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
 pub fn inc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
-    memory.write_byte(cpu.get_hl(), value.wrapping_add(1));
+    let value = memory.read_byte(cpu.get_rr(HL));
+    memory.write_byte(cpu.get_rr(HL), value.wrapping_add(1));
 
     cpu.set_flag(Zero, value.wrapping_add(1) == 0);
     cpu.set_flag(Subtract, false);
@@ -125,8 +125,8 @@ pub fn inc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x60);
 /// ```
 pub fn dec_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
-    memory.write_byte(cpu.get_hl(), value.wrapping_sub(1));
+    let value = memory.read_byte(cpu.get_rr(HL));
+    memory.write_byte(cpu.get_rr(HL), value.wrapping_sub(1));
 
     cpu.set_flag(Zero, value.wrapping_sub(1) == 0);
     cpu.set_flag(Subtract, true);
@@ -160,7 +160,7 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// ```
 pub fn add_sp_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let n = cpu.read_n(memory) as i8 as u16;
-    let sp = cpu.get_sp();
+    let sp = cpu.get_rr(SP);
     let result = cpu.sp.wrapping_add(n);
     cpu.sp = result;
 

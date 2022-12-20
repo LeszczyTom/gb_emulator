@@ -24,7 +24,7 @@ pub enum Register {
     E,
     H,
     L,
-    F,
+    _F,
 }
 
 #[derive(Clone, PartialEq)]
@@ -79,34 +79,6 @@ impl Cpu {
         }
     }
 
-    pub fn set_a(&mut self, value: u8) { self.a = value; }
-    pub fn set_b(&mut self, value: u8) { self.b = value; }
-    pub fn set_c(&mut self, value: u8) { self.c = value; }
-    pub fn set_d(&mut self, value: u8) { self.d = value; }
-    pub fn set_e(&mut self, value: u8) { self.e = value; }
-    pub fn set_h(&mut self, value: u8) { self.h = value; }
-    pub fn set_l(&mut self, value: u8) { self.l = value; }
-    pub fn set_f(&mut self, value: u8) { self.f = value; }
-    pub fn set_pc(&mut self, value: u16) { self.pc = value; }
-    pub fn set_sp(&mut self, value: u16) { self.sp = value; }
-    pub fn set_ime(&mut self, value: bool) { self.ime = value; }
-
-    pub fn get_a(&self) -> u8 { self.a }
-    pub fn get_b(&self) -> u8 { self.b }
-    pub fn get_c(&self) -> u8 { self.c }
-    pub fn get_d(&self) -> u8 { self.d }
-    pub fn get_e(&self) -> u8 { self.e }
-    pub fn get_h(&self) -> u8 { self.h }
-    pub fn get_l(&self) -> u8 { self.l }
-    pub fn get_f(&self) -> u8 { self.f }
-    pub fn get_af(&self) -> u16 { self.get_rr(AF) }
-    pub fn get_bc(&self) -> u16 { self.get_rr(BC) }
-    pub fn get_de(&self) -> u16 { self.get_rr(DE) }
-    pub fn get_hl(&self) -> u16 { self.get_rr(HL) }
-    pub fn get_pc(&self) -> u16 { self.pc }
-    pub fn get_sp(&self) -> u16 { self.sp }
-    pub fn get_ime(&self) -> bool { self.ime }
-
     pub fn get_r(&self, r: Register) -> u8 {
         match r {
             A => self.a,
@@ -116,7 +88,7 @@ impl Cpu {
             E => self.e,
             H => self.h,
             L => self.l,
-            F => self.f,
+            _F => self.f,
         }
     }
 
@@ -129,7 +101,7 @@ impl Cpu {
             E => self.e = value,
             H => self.h = value,
             L => self.l = value,
-            F => self.f = value,
+            _F => self.f = value,
         }
     }
 
@@ -210,10 +182,6 @@ impl Cpu {
         }
 
         self.halt
-    }
-
-    pub fn set_halt(&mut self, value: bool) {
-        self.halt = value;
     }
 
     pub fn read_n(&mut self, memory: &mut Mmu) -> u8 {

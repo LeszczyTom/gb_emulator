@@ -220,9 +220,9 @@ pub fn rlc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x80);
 /// ```
 pub fn rlc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = rlc_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }
@@ -280,9 +280,9 @@ pub fn rrc_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x80);
 /// ```
 pub fn rrc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = rrc_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }
@@ -341,9 +341,9 @@ pub fn rr_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
 pub fn rr_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = rr_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }
@@ -398,9 +398,9 @@ pub fn sla_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x10);
 /// ```
 pub fn sla_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = sla_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }
@@ -454,9 +454,9 @@ pub fn sra_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x90);
 /// ```
 pub fn sra_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = sra_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }
@@ -511,9 +511,9 @@ pub fn swap_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x00);
 /// ```
 pub fn swap_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = swap_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }
@@ -567,9 +567,9 @@ pub fn srl_r(r: Register, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(cpu.get_f(), 0x10);
 /// ```
 pub fn srl_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
+    let value = memory.read_byte(cpu.get_rr(HL));
     let result = srl_m(value, cpu);
-    memory.write_byte(cpu.get_hl(), result);
+    memory.write_byte(cpu.get_rr(HL), result);
 
     16
 }

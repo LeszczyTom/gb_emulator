@@ -112,8 +112,8 @@ pub fn res_r(r: Register, bit: u8, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0x1000), 0xf7);
 /// ```
 pub fn res_hl(bit: u8, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
-    memory.write_byte(cpu.get_hl(),  value & !(1 << bit));
+    let value = memory.read_byte(cpu.get_rr(HL));
+    memory.write_byte(cpu.get_rr(HL),  value & !(1 << bit));
 
     16
 }
@@ -161,8 +161,8 @@ pub fn set_r(r: Register, bit: u8, cpu: &mut Cpu) -> u8 {
 /// assert_eq!(memory.read_byte(0x1000), 0x08);
 /// ```
 pub fn set_hl(bit: u8, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
-    let value = memory.read_byte(cpu.get_hl());
-    memory.write_byte(cpu.get_hl(),  value | (1 << bit));
+    let value = memory.read_byte(cpu.get_rr(HL));
+    memory.write_byte(cpu.get_rr(HL),  value | (1 << bit));
 
     16
 }
