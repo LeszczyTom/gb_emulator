@@ -62,7 +62,6 @@ impl MenuBar {
                                 }
                                 
                                 if ui.button("Show Gameboy screen").clicked() {
-                                    //self.visible_widgets.entry(Widgets::GameboyScreen).and_modify(|value| *value = !*value);
                                     gameboy_screen.update_visibility();
                                     *resize_requested = true;
                                 }
@@ -71,6 +70,16 @@ impl MenuBar {
                                     debug_widget.update_visibility();
                                     *resize_requested = true;
                                 }
+
+                                ui.menu_button("Debug widgets", |ui| { 
+                                    if ui.button("Show CPU registers").clicked() {
+                                        debug_widget.register_window.update_visibility()
+                                    }
+    
+                                    if ui.button("Show Memory dump").clicked() {
+                                        debug_widget.memory_dump_window.update_visibility()
+                                    }
+                                });
                             });
                         });
 
