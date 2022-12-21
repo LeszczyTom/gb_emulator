@@ -6,7 +6,7 @@ const HEIGHT: usize = 144;
 pub struct GameboyScreen {
     visible: bool,
     size: [usize; 2],
-    scaled_size: [f32; 2],
+    pub scaled_size: [f32; 2],
 }
 
 impl Default for GameboyScreen {

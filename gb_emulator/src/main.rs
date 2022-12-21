@@ -1,24 +1,13 @@
 mod widgets;
 
-use std::{collections::HashMap, ops::Add};
-
+use std::ops::Add;
 use chrono::Utc;
 use eframe::egui;
 use gameboy::GameBoy;
 
-
-#[derive(PartialEq, Hash, Eq)]
-enum Widgets {
-    MenuBar,
-    GameboyScreen,
-    Debug
-}
-
 const WIDTH: usize = 144;
 const HEIGHT: usize = 160;
 const MARGIN: f32 = 10.;
-const MENU_BAR_HEIGHT: f32 = 10.;
-const BORDER_SIZE: f32 = 0.5;
 
 fn main() {
     let native_options = eframe::NativeOptions {
@@ -41,8 +30,6 @@ struct GameboyEmulatorGUI {
     pixels: [u8; WIDTH * HEIGHT * 4],
     gameboy: GameBoy,
     fps: u32,
-    scaled_size: [f32; 2],
-    visible_widgets: HashMap<Widgets, bool>,
     resize_requested: bool,
     debug_widget: widgets::debug_widget::DebugWidget,
     menu_bar_widget: widgets::menu_bar::MenuBar,
@@ -51,20 +38,10 @@ struct GameboyEmulatorGUI {
 
 impl GameboyEmulatorGUI {
     fn new(_cc: &eframe::CreationContext<'_>, scale: f32, fps: u32) -> Self {
-        let scaled_width = WIDTH as f32 * scale;
-        let scaled_height = HEIGHT as f32 * scale;
-        let visible_widgets = HashMap::from([
-            (Widgets::MenuBar, true),
-            (Widgets::GameboyScreen, true),
-            (Widgets::Debug, true)
-        ]);
-
         Self {
             pixels: [0; HEIGHT * WIDTH * 4],
             gameboy: GameBoy::new(),
             fps,
-            scaled_size: [scaled_height, scaled_width],
-            visible_widgets,
             resize_requested: true,
             debug_widget: widgets::debug_widget::DebugWidget::default(),
             menu_bar_widget: widgets::menu_bar::MenuBar::default(),
@@ -106,15 +83,23 @@ impl GameboyEmulatorGUI {
             size = size.add(self.menu_bar_widget.get_size());
         };
 
+        if size.x < 200. {
+            size.x = 200.
+        }
+
+        if size.y < 200. {
+            size.y = 200.
+        }
+
         size.add(egui::vec2(vertical_margin, horizontal_margin))
     }
 
     fn draw_widgets(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        self.menu_bar_widget.show(ctx, frame, &mut self.debug_widget, &mut self.resize_requested);
+        self.menu_bar_widget.show(ctx, frame, &mut self.debug_widget, &mut self.gameboy_screen_widget, &mut self.resize_requested);
 
         self.gameboy_screen_widget.show(ctx, &self.pixels);
 
-        self.debug_widget.show(ctx, self.scaled_size[0], &self.gameboy.mmu, &self.gameboy.cpu);   
+        self.debug_widget.show(ctx, self.gameboy_screen_widget.scaled_size[0], &self.gameboy.mmu, &self.gameboy.cpu);   
     }
 }
 
