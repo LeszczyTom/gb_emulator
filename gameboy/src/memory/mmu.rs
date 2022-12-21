@@ -29,6 +29,10 @@ impl Mmu {
         }
     }
 
+    pub fn get_slice_data(&self, addr: usize) -> Vec<u8> {
+        self.data[addr..addr+16].to_vec()
+    }
+
     pub fn set_bios_enabled(&mut self, enabled: bool) {
         self.bios_enabled = enabled;
     }
