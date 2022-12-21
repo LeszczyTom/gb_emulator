@@ -5,8 +5,6 @@ use chrono::Utc;
 use eframe::egui;
 use gameboy::GameBoy;
 
-const WIDTH: usize = 144;
-const HEIGHT: usize = 160;
 const MARGIN: f32 = 10.;
 
 fn main() {
@@ -27,7 +25,6 @@ fn main() {
 }
 
 struct GameboyEmulatorGUI {
-    pixels: [u8; WIDTH * HEIGHT * 4],
     gameboy: GameBoy,
     fps: u32,
     resize_requested: bool,
@@ -39,7 +36,6 @@ struct GameboyEmulatorGUI {
 impl GameboyEmulatorGUI {
     fn new(_cc: &eframe::CreationContext<'_>, scale: f32, fps: u32) -> Self {
         Self {
-            pixels: [0; HEIGHT * WIDTH * 4],
             gameboy: GameBoy::new(),
             fps,
             resize_requested: true,
@@ -97,7 +93,7 @@ impl GameboyEmulatorGUI {
     fn draw_widgets(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.menu_bar_widget.show(ctx, frame, &mut self.debug_widget, &mut self.gameboy_screen_widget, &mut self.resize_requested);
 
-        self.gameboy_screen_widget.show(ctx, &self.pixels);
+        self.gameboy_screen_widget.show(ctx);
 
         self.debug_widget.show(ctx, self.gameboy_screen_widget.scaled_size[0], &self.gameboy.mmu, &self.gameboy.cpu);   
     }
@@ -117,7 +113,7 @@ impl eframe::App for GameboyEmulatorGUI {
 
         let time = Utc::now();
         
-        self.gameboy.cycle(&mut self.pixels, self.fps);
+        self.gameboy.cycle(&mut self.gameboy_screen_widget.pixels, self.fps);
     
         self.draw_widgets(ctx, frame);
 

@@ -6,6 +6,7 @@ const HEIGHT: usize = 144;
 pub struct GameboyScreen {
     visible: bool,
     size: [usize; 2],
+    pub pixels: [u8; WIDTH * HEIGHT * 4],
     pub scaled_size: [f32; 2],
 }
 
@@ -14,6 +15,7 @@ impl Default for GameboyScreen {
         Self {
             visible: true,
             size: [WIDTH, HEIGHT],
+            pixels: [0; WIDTH * HEIGHT * 4],
             scaled_size: [WIDTH as f32, HEIGHT as f32],
         }
     }
@@ -27,14 +29,14 @@ impl GameboyScreen {
         }
     }
 
-    pub fn show(&self, ctx: &egui::Context, pixels: &[u8]) {
+    pub fn show(&self, ctx: &egui::Context) {
         if !self.visible {
             return
         }
 
         let image = egui::ColorImage::from_rgba_unmultiplied(
             self.size,
-            pixels,
+            &self.pixels,
         );
         let gameboy_screen_texture = ctx.load_texture("gameboy_screen_texture", image, egui::TextureOptions::NEAREST);
     
