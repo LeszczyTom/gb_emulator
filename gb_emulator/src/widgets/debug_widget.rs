@@ -5,7 +5,8 @@ pub struct DebugWidget {
     visible: bool,
     frame: egui::Frame,
     pub register_window: debug::registers::Register,
-    pub memory_dump_window: debug::memory_dump::MemoryDump
+    pub memory_dump_window: debug::memory_dump::MemoryDump,
+    pub controls_window: debug::controls::Controls
 }
 
 impl Default for DebugWidget {
@@ -22,6 +23,7 @@ impl Default for DebugWidget {
             frame: register_widget_frame,
             register_window: debug::registers::Register::default(),
             memory_dump_window: debug::memory_dump::MemoryDump::default(),
+            controls_window: debug::controls::Controls::default(),
         }
     }
 }
@@ -30,8 +32,7 @@ impl DebugWidget {
     pub fn show(&mut self, 
         ctx: &egui::Context, 
         width: f32, 
-        mmu: &gameboy::memory::mmu::Mmu, 
-        cpu: &gameboy::cpu::cpu::Cpu) { 
+        gameboy: &mut gameboy::GameBoy) { 
             if !self.visible {
                 return
             }
@@ -41,8 +42,9 @@ impl DebugWidget {
                 .resizable(false)
                 .frame(self.frame)
                 .show(ctx, |_| {
-                    self.register_window.show(ctx, cpu);
-                    self.memory_dump_window.show(ctx, mmu);
+                    self.register_window.show(ctx, &gameboy.cpu);
+                    self.controls_window.show(ctx, gameboy);
+                    self.memory_dump_window.show(ctx, &gameboy.mmu);
                 });
     }
 

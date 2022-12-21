@@ -79,6 +79,10 @@ impl MenuBar {
                                     if ui.button("Show Memory dump").clicked() {
                                         debug_widget.memory_dump_window.update_visibility()
                                     }
+                                    
+                                    if ui.button("Show controls").clicked() {
+                                        debug_widget.controls_window.update_visibility()
+                                    }
                                 });
                             });
                         });

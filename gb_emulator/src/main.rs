@@ -92,10 +92,8 @@ impl GameboyEmulatorGUI {
 
     fn draw_widgets(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         self.menu_bar_widget.show(ctx, frame, &mut self.debug_widget, &mut self.gameboy_screen_widget, &mut self.resize_requested);
-
         self.gameboy_screen_widget.show(ctx);
-
-        self.debug_widget.show(ctx, self.gameboy_screen_widget.scaled_size[0], &self.gameboy.mmu, &self.gameboy.cpu);   
+        self.debug_widget.show(ctx, self.gameboy_screen_widget.scaled_size[0], &mut self.gameboy);  
     }
 }
 

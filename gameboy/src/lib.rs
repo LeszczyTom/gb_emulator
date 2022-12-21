@@ -4,7 +4,6 @@ mod gpu;
 pub mod io;
 
 const CLOCK_SPEED: u32 = 4_194_304;
-const SPEED: u32 = 10;
 
 pub struct GameBoy {
     pub cpu: cpu::cpu::Cpu,
@@ -12,6 +11,8 @@ pub struct GameBoy {
     pub mmu: memory::mmu::Mmu,
     timer: io::timer::Timer,
     cycles: u8,
+    pub debug_paused: bool,
+    pub speed: u32,
 }
 
 impl GameBoy {
@@ -22,11 +23,17 @@ impl GameBoy {
             mmu: memory::mmu::Mmu::new(),
             timer: io::timer::Timer::new(),
             cycles: 0,
+            debug_paused: false,
+            speed: 1,
         }
     }
 
     pub fn cycle(&mut self, frame: &mut [u8], fps: u32) {
-        for _ in 0..(CLOCK_SPEED / fps) * SPEED {  // Perform 4_194_304 / fps cycles (1 frame)
+        if self.debug_paused {
+            return
+        }
+
+        for _ in 0..(CLOCK_SPEED / fps) * self.speed {  // Perform 4_194_304 / fps cycles (1 frame)
             // If the CPU is halted, it will only wake up when an interrupt occurs.
             if self.cpu.get_halt(&mut self.mmu) {
                 continue;
@@ -41,5 +48,13 @@ impl GameBoy {
             self.timer.tick(&mut self.mmu);
             self.ppu.cycle(frame, &mut self.mmu);
         }
+    }
+
+    pub fn reset(&mut self) {
+        self.cpu = cpu::cpu::Cpu::new();
+        self.ppu = gpu::ppu::Ppu::new();
+        self.mmu = memory::mmu::Mmu::new();
+        self.timer = io::timer::Timer::new();
+        self.cycles = 0;
     }
 }
