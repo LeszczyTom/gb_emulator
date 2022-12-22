@@ -10,6 +10,7 @@ pub struct DebugWidget {
     pub timer_widget: debug::timer::Timer,
     pub interrupts_widget: debug::interrupts::Interrupts,
     pub background_map_widget: debug::background_map::BackgroundMap,
+    pub tile_data_widget: debug::tile_data::TileData,
 }
 
 impl Default for DebugWidget {
@@ -33,6 +34,7 @@ impl Default for DebugWidget {
             timer_widget: debug::timer::Timer::default(),
             interrupts_widget: debug::interrupts::Interrupts::default(),
             background_map_widget: debug::background_map::BackgroundMap::default(),
+            tile_data_widget: debug::tile_data::TileData::default(),
         }
     }
 }
@@ -54,6 +56,7 @@ impl DebugWidget {
                 self.timer_widget.show(ctx, &gameboy.mmu);
                 self.interrupts_widget.show(ctx, &gameboy.mmu);
                 self.background_map_widget.show(ctx, &gameboy.mmu);
+                self.tile_data_widget.show(ctx, &gameboy.mmu);
             });
     }
 

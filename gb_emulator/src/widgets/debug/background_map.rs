@@ -20,7 +20,7 @@ pub struct BackgroundMap {
 impl Default for BackgroundMap {
     fn default() -> Self {
         Self {
-            visible: true,
+            visible: false,
             tile_map_area: TileMapArea::First,
             viewport_visible: true,
         }
@@ -121,7 +121,10 @@ fn get_tile_map_rgba_array(
     res
 }
 
-fn add_viewport_border_to_array(array: &mut [u8; WIDTH * HEIGHT * 4], mmu: &gameboy::memory::mmu::Mmu) {
+fn add_viewport_border_to_array(
+    array: &mut [u8; WIDTH * HEIGHT * 4],
+    mmu: &gameboy::memory::mmu::Mmu,
+) {
     let scy = mmu.read_byte(0xFF42) as usize;
     let scx = mmu.read_byte(0xFF43) as usize;
 
@@ -134,9 +137,9 @@ fn add_viewport_border_to_array(array: &mut [u8; WIDTH * HEIGHT * 4], mmu: &game
                 let index = y * 4 + (x * 4) * 256;
 
                 // Paint border Red
-                array[index] = 255; 
-                array[index + 1] = 0; 
-                array[index + 2] = 0; 
+                array[index] = 255;
+                array[index + 1] = 0;
+                array[index + 2] = 0;
             }
         }
     }

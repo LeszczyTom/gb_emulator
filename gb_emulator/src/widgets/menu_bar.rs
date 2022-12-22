@@ -104,6 +104,10 @@ impl MenuBar {
                                 if ui.button("Show Background map").clicked() {
                                     debug_widget.background_map_widget.update_visibility()
                                 }
+
+                                if ui.button("Show Tile data").clicked() {
+                                    debug_widget.tile_data_widget.update_visibility()
+                                }
                             });
                         });
                     });
