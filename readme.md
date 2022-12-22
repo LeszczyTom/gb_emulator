@@ -36,5 +36,5 @@ Main gameboy screen with debugging widgets:
 
 # Dependencies
 
-* [winit](https://github.com/rust-windowing/winit): 0.27.5
-* [pixels](https://github.com/parasyte/pixels): 0.9.0
+* [eframe](https://github.com/emilk/eframe_template) = 0.20.1
+* [chrono](https://github.com/chronotope/chrono) = 0.4.23
