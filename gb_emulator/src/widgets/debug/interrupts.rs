@@ -4,14 +4,12 @@ const INTERRUPT_ENABLE_ADDRESS: u16 = 0xFFFF;
 const INTERRUPT_FLAG_ADDRESS: u16 = 0xFF0F;
 
 pub struct Interrupts {
-    visible: bool
+    visible: bool,
 }
 
 impl Default for Interrupts {
     fn default() -> Self {
-        Self {
-            visible: false
-        }
+        Self { visible: false }
     }
 }
 
@@ -25,7 +23,7 @@ impl Interrupts {
             .open(&mut self.visible)
             .resizable(false)
             .collapsible(false)
-            .show(ctx, |ui|{
+            .show(ctx, |ui| {
                 get_ie(ui, mmu);
                 get_if(ui, mmu);
             });

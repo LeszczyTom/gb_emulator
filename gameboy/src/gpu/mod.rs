@@ -1,3 +1,3 @@
-pub mod ppu;
-mod fifo;
 mod fetcher;
+mod fifo;
+pub mod ppu;

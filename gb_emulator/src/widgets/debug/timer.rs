@@ -6,21 +6,19 @@ const TIMER_MODULO_ADDRESS: u16 = 0xFF06;
 const TIMER_CONTROL_ADDRESS: u16 = 0xFF07;
 
 pub struct Timer {
-    visible: bool
+    visible: bool,
 }
 
 impl Default for Timer {
     fn default() -> Self {
-        Self {
-            visible: false
-        }
+        Self { visible: false }
     }
 }
 
 impl Timer {
     pub fn show(&mut self, ctx: &egui::Context, mmu: &gameboy::memory::mmu::Mmu) {
         if !self.visible {
-            return
+            return;
         }
 
         egui::Window::new("Timer")
@@ -58,17 +56,17 @@ fn get_label_tma(ui: &mut egui::Ui, mmu: &gameboy::memory::mmu::Mmu) {
 fn get_label_tac(ui: &mut egui::Ui, mmu: &gameboy::memory::mmu::Mmu) {
     let tac_value = mmu.read_byte(TIMER_CONTROL_ADDRESS);
     ui.label(format!("TAC: {:02X}", tac_value));
-    
+
     let timer_enable = if tac_value >> 2 == 0 { false } else { true };
     ui.label(format!("Timer enabled: {}", timer_enable));
 
     let input_clock_select = tac_value & 0b11;
     let clock_frequency = match input_clock_select {
-        0b00 => 4_096, 
+        0b00 => 4_096,
         0b01 => 262_144,
         0b10 => 65_536,
         0b11 => 16_384,
-        _ => unreachable!("input clock select > 0b11")
+        _ => unreachable!("input clock select > 0b11"),
     };
 
     ui.label(format!("Clock frequency: {}Hz", clock_frequency));

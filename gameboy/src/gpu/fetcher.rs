@@ -6,7 +6,7 @@ const COLORS: [[u8; 4]; 4] = [
     [0x88, 0xc0, 0x70, 0xff],
     [0x34, 0x68, 0x56, 0xff],
     [0x08, 0x18, 0x20, 0xff],
-    ];
+];
 
 enum Step {
     ReadTileId,
@@ -40,7 +40,7 @@ impl Fetcher {
         let x = ((scx / 8) + self.x as u8) & 0x1F;
         let y = (memory.get_ly() + scy) & 255;
         let row: u16 = y as u16 / 8;
-        let col = x as u16 ;
+        let col = x as u16;
 
         let offset = 0x8000 + self.tile_id as u16 * 16;
         let addr = offset + (y as u16 % 8) * 2;
@@ -52,7 +52,9 @@ impl Fetcher {
                         let mut data = [0; 2];
                         data[0] = self.data0 >> (7 - i) & 1;
                         data[1] = self.data1 >> (7 - i) & 1;
-                        fifo.push_back(COLORS[memory.get_background_palette((data[1] << 1) | data[0])]);
+                        fifo.push_back(
+                            COLORS[memory.get_background_palette((data[1] << 1) | data[0])],
+                        );
                     }
                 }
             }

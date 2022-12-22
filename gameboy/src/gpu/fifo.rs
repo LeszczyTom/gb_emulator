@@ -1,5 +1,5 @@
-use crate::memory::mmu::Mmu;
 use crate::gpu::fetcher::Fetcher;
+use crate::memory::mmu::Mmu;
 use std::collections::VecDeque;
 
 pub struct Fifo {
@@ -12,7 +12,7 @@ impl Fifo {
     pub fn new() -> Fifo {
         Fifo {
             fetcher: Fetcher::new(),
-            data:VecDeque::new(),
+            data: VecDeque::new(),
             clock: false,
         }
     }
@@ -24,12 +24,13 @@ impl Fifo {
     }
 
     pub fn cycle(&mut self, memory: &mut Mmu) -> Option<([u8; 4])> {
-        if self.clock { // 1Mhz
+        if self.clock {
+            // 1Mhz
             self.clock = false;
-            return self.push()
+            return self.push();
         }
         self.clock = true;
-        
+
         self.fetcher.cycle(memory, &mut self.data);
         self.push()
     }

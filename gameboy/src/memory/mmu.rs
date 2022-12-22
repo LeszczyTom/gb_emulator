@@ -10,27 +10,32 @@ impl Mmu {
     pub fn new() -> Self {
         let bios = match std::fs::read("resources/bios.bin") {
             Ok(bytes) => bytes,
-            Err(e) => panic!("Error: {}", e)
-        }; 
-        
+            Err(e) => panic!("Error: {}", e),
+        };
+
         let rom = match std::fs::read("resources/dr_mario.gb") {
             Ok(bytes) => bytes,
-            Err(e) => panic!("Error: {}", e)
-        }; 
-        
+            Err(e) => panic!("Error: {}", e),
+        };
+
         let mut data = [0; MEM_SIZE];
         data[0..0x8000].copy_from_slice(&rom);
 
         Self {
             data,
-            bios: bios.try_into()
-                .unwrap_or_else(|v: Vec<u8>| panic!("Expected a Vec of length {} but it was {}", 100, v.len())),
+            bios: bios.try_into().unwrap_or_else(|v: Vec<u8>| {
+                panic!("Expected a Vec of length {} but it was {}", 100, v.len())
+            }),
             bios_enabled: true,
         }
     }
 
+    pub fn get_data(&self) -> [u8; MEM_SIZE] {
+        self.data
+    }
+
     pub fn get_slice_data(&self, addr: usize) -> Vec<u8> {
-        self.data[addr..addr+16].to_vec()
+        self.data[addr..addr + 16].to_vec()
     }
 
     pub fn set_bios_enabled(&mut self, enabled: bool) {
@@ -40,8 +45,8 @@ impl Mmu {
     pub fn read_byte(&self, addr: u16) -> u8 {
         if self.bios_enabled & (addr < 0x100) {
             return self.bios[addr as usize];
-        } 
-        self.data[addr as usize] 
+        }
+        self.data[addr as usize]
     }
 
     pub fn write_byte(&mut self, addr: u16, val: u8) {
@@ -49,15 +54,16 @@ impl Mmu {
 
         match addr {
             0xFF50 => self.set_bios_enabled(val == 0),
-            0xFF04 => { // Reset timer registers if writting to DIV
+            0xFF04 => {
+                // Reset timer registers if writting to DIV
                 self.data[0xFF04] = 0;
                 self.data[0xFF05] = 0;
-
-            },
-            0xFF01 => { // Serial debug
+            }
+            0xFF01 => {
+                // Serial debug
                 print!("{}", val as char);
-            },
-            _ => ()
+            }
+            _ => (),
         }
     }
 
@@ -77,7 +83,7 @@ impl Mmu {
         self.data[0xFF43]
     }
 
-    pub fn get_background_palette(&self, index :u8) -> usize {
+    pub fn get_background_palette(&self, index: u8) -> usize {
         (self.data[0xFF47] >> (index * 2) & 0x3) as usize
     }
 
@@ -110,7 +116,7 @@ impl Mmu {
                 print!("|\n{:04X}: | ", i);
                 cpt = 16;
             }
-            print!("{:02X} ", self.data[i]); 
+            print!("{:02X} ", self.data[i]);
             cpt -= 1;
         }
         println!("|");
@@ -119,7 +125,7 @@ impl Mmu {
     pub fn get_tile(&self, index: usize) -> [u8; 16] {
         let mut tile = [0; 16];
         let start = 0x8000 + (index * 16);
-        tile.copy_from_slice(&self.data[start..start+16]);
+        tile.copy_from_slice(&self.data[start..start + 16]);
         tile
     }
 

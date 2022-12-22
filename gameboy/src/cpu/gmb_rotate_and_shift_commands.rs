@@ -1,11 +1,5 @@
-use crate::cpu::cpu::{
-    Cpu,
-    Register,
-    RegisterPair::HL,
-    Flag::*
-};
+use crate::cpu::cpu::{Cpu, Flag::*, Register, RegisterPair::HL};
 use crate::memory::mmu::Mmu;
-
 
 /// Rotates the contents of operand m to the left, r and (HL) are used for operand m.
 /// ```rust
@@ -59,7 +53,7 @@ pub fn rl_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 }
 
 /// Rotates the contents of register A to the left.
-/// ```rust	
+/// ```rust
 /// //Example: When A = 0x95 and CY = 1,
 /// //RLA ; A <- 0x2B, Z <- 0, N <- 0, H <- 0, C <- 1,
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
@@ -361,7 +355,7 @@ fn sla_m(value: u8, cpu: &mut Cpu) -> u8 {
 
 /// ```rust
 /// //Examples: When D = 80h, (HL) = FFh, and CY = 0,
-/// //SLA D ; D <- 0, Z <- 1, N <- 0, H <- 0,  CY <- 1 
+/// //SLA D ; D <- 0, Z <- 1, N <- 0, H <- 0,  CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
@@ -474,7 +468,7 @@ fn swap_m(value: u8, cpu: &mut Cpu) -> u8 {
 
 /// ```rust
 /// //xamples: When A = 0 and (HL) = 0xFO,
-/// //SWAP A ; A <- 0, Z <- 1 , N <- 0, H <- 0, CY <- 0 
+/// //SWAP A ; A <- 0, Z <- 1 , N <- 0, H <- 0, CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
@@ -530,7 +524,7 @@ fn srl_m(value: u8, cpu: &mut Cpu) -> u8 {
 
 /// ```rust
 /// //Examples: When A = 1, (HL) = 0xFF, CY = 0,
-/// //SRL A ; A <- 0, Z <- 1 , N <- 0 H <- 0, CY <- 1 
+/// //SRL A ; A <- 0, Z <- 1 , N <- 0 H <- 0, CY <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);

@@ -1,13 +1,13 @@
 use crate::cpu::cpu::{
     Cpu,
-    RegisterPair::{ self, HL },
-    Flag::*
+    Flag::*,
+    RegisterPair::{self, HL},
 };
 
 use crate::memory::mmu::Mmu;
 
 /// Loads 2 bytes of immediate data to register pair rr.
-/// 
+///
 /// ``` rust
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
@@ -16,7 +16,7 @@ use crate::memory::mmu::Mmu;
 /// # memory.write_byte(0x01, 0x5b);
 /// # memory.write_byte(0x02, 0x3a);
 /// //Example: LD HL, 0x3A5B ; H <- 0x3A, L <- 0x5B
-/// 
+///
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_h(), 0x3a);
 /// assert_eq!(cpu.get_l(), 0x5b);
@@ -74,13 +74,13 @@ pub fn pop_rr(rr: RegisterPair, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     cpu.sp = cpu.sp.wrapping_add(1);
 
     cpu.set_rr(rr, u16::from_be_bytes([high, low]));
-    
+
     cpu.f &= 0xF0;
     12
 }
 
 /// Stores the lower byte of SP at address nn specified by the 16-bit immediate operand nn and the upper byte of SP at address nn + 1.
-/// ```rust	
+/// ```rust
 /// //Example: When SP = 0xFFF8,
 /// //LD (0xc100) , SP ; 0xc100 <- 0xF8, 0xc101 <- 0xFF
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
@@ -114,7 +114,7 @@ pub fn ld_nn_sp(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_hl(), 0xfffa);
 /// assert_eq!(cpu.get_f(), 0);
-/// 
+///
 /// //Example: When SP = 0xFFF8,
 /// //LDHL SP, -2 ; HL <- 0xFFF6, Z <- 0,  N <- 0, H <- 1, CY <- 1
 /// # cpu.set_sp(0xfff8);
@@ -134,7 +134,7 @@ pub fn ldhl_sp_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     cpu.set_flag(Subtract, false);
     cpu.set_flag(HalfCarry, (sp ^ n ^ result) & 0x10 == 0x10);
     cpu.set_flag(Carry, (sp ^ n ^ result) & 0x100 == 0x100);
-    
+
     12
 }
 

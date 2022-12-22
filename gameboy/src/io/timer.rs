@@ -5,17 +5,15 @@ pub struct Timer {
 }
 
 impl Timer {
-    pub fn new () -> Self {
-        Self {
-            counter: 0,
-        }
+    pub fn new() -> Self {
+        Self { counter: 0 }
     }
 
     pub fn tick(&mut self, memory: &mut Mmu) {
         let old_div = u16::from_be_bytes([memory.read_byte(0xFF04), memory.read_byte(0xFF03)]);
 
         memory.increment_divider();
-        
+
         if memory.read_byte(0xFF07) & 0x4 == 0 {
             return;
         }
@@ -25,7 +23,7 @@ impl Timer {
             1 => 0x8,
             2 => 0x20,
             3 => 0x80,
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         let new_div = u16::from_be_bytes([memory.read_byte(0xFF04), memory.read_byte(0xFF03)]);
@@ -48,36 +46,41 @@ fn test_tick() {
     let mut timer = Timer::new();
 
     memory.write_byte(0xFF07, 0x4); // Enable timer, set rate to 1024
-    timer.tick(&mut memory);                  // Total ticks: 1
-    assert_eq!(memory.read_byte(0xFF04), 0);  
+    timer.tick(&mut memory); // Total ticks: 1
+    assert_eq!(memory.read_byte(0xFF04), 0);
     assert_eq!(memory.read_byte(0xFF05), 0);
 
-    for _ in 0..255 {                         // Total ticks: 256
+    for _ in 0..255 {
+        // Total ticks: 256
         timer.tick(&mut memory);
     }
     assert_eq!(memory.read_byte(0xFF04), (256 / 256) as u8); // 0
     assert_eq!(memory.read_byte(0xFF05), (256 / 1024) as u8); // 0
 
-    for _ in 0..256 {                          // Total ticks: 512
+    for _ in 0..256 {
+        // Total ticks: 512
         timer.tick(&mut memory);
     }
     assert_eq!(memory.read_byte(0xFF04), (512 / 256) as u8); // 2
     assert_eq!(memory.read_byte(0xFF05), (512 / 1024) as u8); // 0
 
-    for _ in 0..512 {                         // Total ticks: 1024
+    for _ in 0..512 {
+        // Total ticks: 1024
         timer.tick(&mut memory);
     }
     assert_eq!(memory.read_byte(0xFF04), (1024 / 256) as u8); // 4
     assert_eq!(memory.read_byte(0xFF05), (1024 / 1024) as u8); // 1
 
-    for _ in 0..260_096 {                         // Total ticks: 261_120
+    for _ in 0..260_096 {
+        // Total ticks: 261_120
         timer.tick(&mut memory);
     }
     assert_eq!(memory.read_byte(0xFF04), (261_120 / 256) as u8); // 0xFC
     assert_eq!(memory.read_byte(0xFF05), (261_120 / 1024) as u8); // 0xFF
 
     let mut total_cycle = 261_120;
-    for _ in 0..1_048_576 {                         // Total ticks: 1_309_696
+    for _ in 0..1_048_576 {
+        // Total ticks: 1_309_696
         total_cycle += 1;
         timer.tick(&mut memory);
         assert_eq!(memory.read_byte(0xFF04), (total_cycle / 256) as u8);

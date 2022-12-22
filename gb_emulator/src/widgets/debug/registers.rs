@@ -1,21 +1,19 @@
 use eframe::egui;
 
 pub struct Register {
-    visible: bool
+    visible: bool,
 }
 
 impl Default for Register {
     fn default() -> Self {
-        Self { 
-            visible: false, 
-        }
+        Self { visible: false }
     }
 }
 
 impl Register {
     pub fn show(&mut self, ctx: &egui::Context, cpu: &gameboy::cpu::cpu::Cpu) {
         if !self.visible {
-            return
+            return;
         }
 
         egui::Window::new("Registers")
@@ -43,7 +41,7 @@ impl Register {
                     ui.label("SP");
                     ui.label(format!("0x{:04X}", cpu.sp));
                     ui.end_row();
-                    
+
                     ui.label("PC");
                     ui.label(format!("0x{:04X}", cpu.pc));
                     ui.end_row();

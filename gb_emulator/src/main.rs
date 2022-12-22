@@ -1,9 +1,9 @@
 mod widgets;
 
-use std::ops::Add;
 use chrono::Utc;
 use eframe::egui;
 use gameboy::GameBoy;
+use std::ops::Add;
 
 const MARGIN: f32 = 10.;
 
@@ -16,11 +16,9 @@ fn main() {
     };
 
     eframe::run_native(
-        "Gameboy emulator", 
+        "Gameboy emulator",
         native_options,
-        Box::new(|cc| 
-            Box::new(GameboyEmulatorGUI::new(cc, 3., 60))
-        )
+        Box::new(|cc| Box::new(GameboyEmulatorGUI::new(cc, 3., 60))),
     );
 }
 
@@ -61,20 +59,23 @@ impl GameboyEmulatorGUI {
         if self.gameboy_screen_widget.is_visible() {
             visible_count += 1.;
         }
-        
+
         if self.debug_widget.is_visible() {
             visible_count += 1.;
 
-            if self.gameboy_screen_widget.is_visible() { size.x *= 2.; }
-            else { size = size.add(self.debug_widget.get_size())}
+            if self.gameboy_screen_widget.is_visible() {
+                size.x *= 2.;
+            } else {
+                size = size.add(self.debug_widget.get_size())
+            }
         }
 
         let vertical_margin = (MARGIN * visible_count) - 1.;
         let mut horizontal_margin = MARGIN;
-        
-        if self.gameboy_screen_widget.is_visible() | self.debug_widget.is_visible() { 
+
+        if self.gameboy_screen_widget.is_visible() | self.debug_widget.is_visible() {
             horizontal_margin += MARGIN;
-            size.y += self.menu_bar_widget.get_size().y; 
+            size.y += self.menu_bar_widget.get_size().y;
         } else {
             size = size.add(self.menu_bar_widget.get_size());
         };
@@ -91,9 +92,19 @@ impl GameboyEmulatorGUI {
     }
 
     fn draw_widgets(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
-        self.menu_bar_widget.show(ctx, frame, &mut self.debug_widget, &mut self.gameboy_screen_widget, &mut self.resize_requested);
+        self.menu_bar_widget.show(
+            ctx,
+            frame,
+            &mut self.debug_widget,
+            &mut self.gameboy_screen_widget,
+            &mut self.resize_requested,
+        );
         self.gameboy_screen_widget.show(ctx);
-        self.debug_widget.show(ctx, self.gameboy_screen_widget.scaled_size[0], &mut self.gameboy);  
+        self.debug_widget.show(
+            ctx,
+            self.gameboy_screen_widget.scaled_size[0],
+            &mut self.gameboy,
+        );
     }
 }
 
@@ -110,13 +121,16 @@ impl eframe::App for GameboyEmulatorGUI {
         }
 
         let time = Utc::now();
-        
-        self.gameboy.cycle(&mut self.gameboy_screen_widget.pixels, self.fps);
-    
+
+        self.gameboy
+            .cycle(&mut self.gameboy_screen_widget.pixels, self.fps);
+
         self.draw_widgets(ctx, frame);
 
-        while Utc::now().timestamp_micros() - time.timestamp_micros() <= (1_000_000 / self.fps) as i64 {}
-        
+        while Utc::now().timestamp_micros() - time.timestamp_micros()
+            <= (1_000_000 / self.fps) as i64
+        {}
+
         ctx.request_repaint();
     }
 }

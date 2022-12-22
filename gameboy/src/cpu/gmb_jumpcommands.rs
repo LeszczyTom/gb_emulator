@@ -1,11 +1,9 @@
 use crate::cpu::cpu::{
-    Cpu,
-    RegisterPair::{ PC, HL },
-    Flag
+    Cpu, Flag,
+    RegisterPair::{HL, PC},
 };
-use crate::cpu::gmb_16_bit_loadcommands::{ push_rr, pop_rr};
+use crate::cpu::gmb_16_bit_loadcommands::{pop_rr, push_rr};
 use crate::memory::mmu::Mmu;
-
 
 /// Jumps -127 to +129 steps from the current address.
 /// ``` rust
@@ -18,7 +16,7 @@ use crate::memory::mmu::Mmu;
 /// # cpu.set_f(0);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x07);
-/// 
+///
 /// //JR C, 0x80 ; PC <- PC - 127
 /// # cpu.set_pc(0x100);
 /// # memory.write_byte(0x100, 0x20);
@@ -31,14 +29,13 @@ pub fn jr_cc_n(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     let condition = cpu.get_flag(condition);
     let n = cpu.read_n(memory) as i8;
     let result = cpu.pc.wrapping_add(n as u16);
-    
+
     if condition {
         cpu.pc = result;
         12
     } else {
         8
     }
-    
 }
 
 pub fn jr_n(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
@@ -99,7 +96,7 @@ pub fn ret(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     16
 }
 
-/// If condition cc and the flag match, control is returned to the source program by popping from the memory stack 
+/// If condition cc and the flag match, control is returned to the source program by popping from the memory stack
 /// the PC value pushed to the stack when the subroutine was called.
 /// ```rust
 /// //Examples: When PC = 0x8000; (0x9000) = 0xfe, (0x9001) = 0, (0x9002) = 0xc8;
@@ -121,7 +118,7 @@ pub fn ret(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x8003);
-/// 
+///
 /// //When (0x9001) = 0x01
 /// # cpu.set_pc(0x8000);
 /// # memory.write_byte(0x9001, 0x01);
@@ -161,7 +158,7 @@ pub fn jp_nn(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 
 /// Loads operand nn in the PC if condition cc and the flag status match.
 /// ```rust
-/// //Example: When Z = 1 and C = 0, 
+/// //Example: When Z = 1 and C = 0,
 /// //JP NZ, 0x8000; Moves to next instruction after 3 cycles
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
@@ -172,19 +169,19 @@ pub fn jp_nn(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// # memory.write_byte(0x2, 0x80);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x0003);
-/// 
+///
 /// //JP Z, 0x8000; Jump to 0x8000
 /// # cpu.set_pc(0x0);
 /// # memory.write_byte(0x0, 0xca);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x8000);
-/// 
+///
 /// //JP C, 0x8000; Moves to next instruction after 3 cycles
 /// # cpu.set_pc(0x0);
 /// # memory.write_byte(0x0, 0xda);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x0003);
-/// 
+///
 /// //JP NC, 0x8000; Jump to 0x8000
 /// # cpu.set_pc(0x0);
 /// # memory.write_byte(0x0, 0xd2);
@@ -200,7 +197,7 @@ pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     }
 }
 
-/// If condition cc matches the flag, the PC value corresponding to the instruction following the CALL 
+/// If condition cc matches the flag, the PC value corresponding to the instruction following the CALL
 /// instruction in memory is pushed to the 2 bytes following the memory byte specified by the SP.
 /// ```rust
 /// //Examples: WhenZ = 1, PC = 0x7ffc
@@ -215,7 +212,7 @@ pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// # memory.write_byte(0x7ffe, 0x12);
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_pc(), 0x7fff);
-/// 
+///
 /// //When PC = 0x8000
 /// //CALL Z, 0x1234; Pushes 0x8003 to the stack and jumps to 0x1234
 /// # cpu.set_pc(0x8000);
@@ -226,7 +223,7 @@ pub fn jp_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// assert_eq!(cpu.get_pc(), 0x1234);
 /// assert_eq!(memory.read_byte(cpu.get_sp()), 0x03);
 /// assert_eq!(memory.read_byte(cpu.get_sp() + 1), 0x80);
-/// ``` 
+/// ```
 pub fn call_cc_nn(condition: Flag, cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     if cpu.get_flag(condition) {
         call_nn(cpu, memory)

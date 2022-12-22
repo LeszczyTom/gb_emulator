@@ -1,7 +1,7 @@
 use crate::cpu::cpu::{
     Cpu,
-    RegisterPair::{ self, * },
     Flag::*,
+    RegisterPair::{self, *},
 };
 
 use crate::memory::mmu::Mmu;
@@ -49,7 +49,7 @@ pub fn dec_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// Adds the contents of register pair ss to the contents of register pair HL and stores the results in HL.
 /// ```rust
 /// //Example: When HL = 0x8A23, BC = 0x0605,
-/// //ADD HL, BC ; HL <- 0x9028, N <- 0, H <- 1 , CY <- 0 
+/// //ADD HL, BC ; HL <- 0x9028, N <- 0, H <- 1 , CY <- 0
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
@@ -61,7 +61,7 @@ pub fn dec_rr(rr: RegisterPair, cpu: &mut Cpu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_hl(), 0x9028);
 /// assert_eq!(cpu.get_f(), 0x20);
-/// 
+///
 /// //ADD HL, HL ; HL <- 0x1446, N <- 0, H <- 1, CY <- 1
 /// # cpu.set_pc(0x00);
 /// # memory.write_byte(0x00, 0x29);
@@ -112,7 +112,7 @@ pub fn inc_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// Decrements by 1 the contents of memory specified by register pair HL.
 /// ```rust
 /// //Example: When (HL) = 0x00,
-/// //DEC (HL) ; (HL) <- 0xFF, Z <- 0, N <- 1, H <- 1 
+/// //DEC (HL) ; (HL) <- 0xFF, Z <- 0, N <- 1, H <- 1
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();
 /// # memory.set_bios_enabled(false);
@@ -135,7 +135,7 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
     12
 }
 
-/// Adds the contents of the 8-bit immediate operand e and SP and stores the results in SP. 
+/// Adds the contents of the 8-bit immediate operand e and SP and stores the results in SP.
 /// ```rust
 /// //Example: When SP = 0xFFF8,
 /// //ADD SP, 2 ; SP <- 0xFFFA, Z <- 0,  N <- 0, H <- 0, CY <- 0
@@ -148,7 +148,7 @@ pub fn dec_hl(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_sp(), 0xfffa);
 /// assert_eq!(cpu.get_f(), 0);
-/// 
+///
 /// //Example: When SP = 0xFFF8,
 /// //ADD SP, -2 ; SP <- 0xFFF6, Z <- 0,  N <- 0, H <- 1, CY <- 1
 /// # cpu.set_sp(0xfff8);

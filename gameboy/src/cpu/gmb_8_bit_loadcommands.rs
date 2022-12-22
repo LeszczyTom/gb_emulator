@@ -1,7 +1,6 @@
 use crate::cpu::cpu::{
-    Cpu,
-    Register,
-    RegisterPair::{ HL, DE, BC }
+    Cpu, Register,
+    RegisterPair::{BC, DE, HL},
 };
 
 use crate::memory::mmu::Mmu;
@@ -123,7 +122,7 @@ pub fn ldh_n_a(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 }
 
 /// Loads the contents specified by the contents of register pair DE into register A.
-/// ```rust	
+/// ```rust
 /// //Example: When (DE) = 0x5F,
 /// //LD A, (DE) ; A <- 0x5F
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
@@ -305,7 +304,7 @@ pub fn ld_a_hld(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 
 /// Stores the contents of register r in memory specified by register pair HL.
 /// ```rust
-/// //Example: When A = 0x3C, HL = 0x8AC5 
+/// //Example: When A = 0x3C, HL = 0x8AC5
 /// //LD (HL), A ; (0x8AC5h) <- 0x3C
 /// # let mut cpu = gameboy::gameboy::cpu::Cpu::new();
 /// # let mut memory = gameboy::gameboy::memory::Mmu::new();

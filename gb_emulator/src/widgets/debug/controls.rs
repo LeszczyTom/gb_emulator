@@ -6,16 +6,14 @@ pub struct Controls {
 
 impl Default for Controls {
     fn default() -> Self {
-        Self {
-            visible: true,
-        }
+        Self { visible: true }
     }
 }
 
 impl Controls {
     pub fn show(&mut self, ctx: &egui::Context, gmb: &mut gameboy::GameBoy) {
         if !self.visible {
-            return
+            return;
         }
 
         egui::Window::new("Controls")
@@ -23,9 +21,13 @@ impl Controls {
             .resizable(false)
             .open(&mut self.visible)
             .show(ctx, |ui| {
-                let play_label = if gmb.debug_paused { "Paused" } else { "Playing" };
+                let play_label = if gmb.debug_paused {
+                    "Paused"
+                } else {
+                    "Playing"
+                };
                 let play_button_label = if gmb.debug_paused { "Resume" } else { "Pause" };
-                
+
                 // play/pause
                 ui.horizontal(|ui| {
                     if ui.button(format!("{}", play_button_label)).clicked() {
@@ -44,7 +46,7 @@ impl Controls {
                 if ui.button("Reset").clicked() {
                     gmb.reset()
                 }
-        });
+            });
     }
 
     pub fn update_visibility(&mut self) {

@@ -1,10 +1,6 @@
-use crate::cpu::cpu::{
-    Cpu,
-    Flag::*,
-    RegisterPair
-};
-use crate::memory::mmu::Mmu;
+use crate::cpu::cpu::{Cpu, Flag::*, RegisterPair};
 use crate::cpu::gmb_16_bit_loadcommands::push_rr;
+use crate::memory::mmu::Mmu;
 
 /// Sets the interrupt master enable flag and enables maskable interrupts.
 /// This instruction can be used in an interrupt routine to enable higher-order interrupts.
@@ -25,9 +21,9 @@ pub fn ei(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 }
 
 /// Execution of a STOP instruction stops both the system clock and oscillator circuit. STOP mode is entered, and the LCD controller also stops.
-pub fn stop() ->u8{
+pub fn stop() -> u8 {
     panic!("Stop");
-    // TODO: 
+    // TODO:
     // The following conditions should be met before a STOP instruction is executed and STOP mode is entered
     // All interrupt-enable (IE) flags are reset.
     // Input to PI 0 — PI 3 is LOW for all.
@@ -50,7 +46,7 @@ pub fn stop() ->u8{
 /// cpu.cycle(&mut memory);
 /// assert_eq!(cpu.get_a(), 0x83);
 /// assert_eq!(cpu.get_f() >> 4, 0);
-/// 
+///
 /// //SUB A, B ; A <- 0x83 - 0x38 (0x4B), N <- 1
 /// //DAA ; A <- 0x4B + 0xFA (0x45)
 /// # cpu.set_a(0x83);
@@ -74,9 +70,9 @@ pub fn daa(cpu: &mut Cpu) -> u8 {
         }
     } else if cpu.get_flag(Carry) {
         c = true;
-        cpu.a = cpu.a.wrapping_add(
-            if cpu.get_flag(HalfCarry) { 0x9a } else { 0xa0 }
-        );
+        cpu.a = cpu
+            .a
+            .wrapping_add(if cpu.get_flag(HalfCarry) { 0x9a } else { 0xa0 });
     } else if cpu.get_flag(HalfCarry) {
         cpu.a = cpu.a.wrapping_add(0xfa);
     }
@@ -116,7 +112,7 @@ pub fn ccf(cpu: &mut Cpu) -> u8 {
     4
 }
 
-/// After a HALT instruction is executed, the system clock is stopped and HALT mode is entered. 
+/// After a HALT instruction is executed, the system clock is stopped and HALT mode is entered.
 /// Although the system clock is stopped in this status, the oscillator circuit and LCD controller continue to operate.
 pub fn halt(cpu: &mut Cpu) -> u8 {
     cpu.halt = true;
@@ -135,7 +131,7 @@ pub fn di(cpu: &mut Cpu, memory: &mut Mmu) -> u8 {
 pub fn handle_interrupts(cpu: &mut Cpu, memory: &mut Mmu) -> bool {
     let interupt_enable = memory.read_byte(0xffff);
     let interupt_flag = memory.read_byte(0xff0f);
-        
+
     // V-Blank
     if interupt_enable & 1 == 1 && interupt_flag & 1 == 1 {
         cpu.ime = false;
@@ -144,7 +140,7 @@ pub fn handle_interrupts(cpu: &mut Cpu, memory: &mut Mmu) -> bool {
         cpu.pc = 0x40;
         return true;
     }
-    
+
     // LCD STAT
     if interupt_enable & 2 == 2 && interupt_flag & 2 == 2 {
         cpu.ime = false;

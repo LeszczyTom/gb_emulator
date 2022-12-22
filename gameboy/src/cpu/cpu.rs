@@ -1,19 +1,15 @@
 use crate::cpu::{
-    gmb_8_bit_loadcommands::*, 
-    gmb_16_bit_loadcommands::*,
-    gmb_8_bit_arithmetic_logical_commands::*,
-    gmb_16_bit_arithmetic_logical_commands::*,
-    gmb_rotate_and_shift_commands::*,
+    gmb_16_bit_arithmetic_logical_commands::*, gmb_16_bit_loadcommands::*,
+    gmb_8_bit_arithmetic_logical_commands::*, gmb_8_bit_loadcommands::*,
+    gmb_cpu_controlcommands::*, gmb_jumpcommands::*, gmb_rotate_and_shift_commands::*,
     gmb_singlebit_operation_commands::*,
-    gmb_jumpcommands::*,
-    gmb_cpu_controlcommands::*,
 };
 
 use crate::memory::mmu::Mmu;
 
+use Flag::*;
 use Register::*;
 use RegisterPair::*;
-use Flag::*;
 
 #[derive(Clone)]
 pub enum Register {
@@ -122,26 +118,26 @@ impl Cpu {
             AF => {
                 self.a = bytes[0];
                 self.f = bytes[1];
-            },
+            }
             BC => {
                 self.b = bytes[0];
                 self.c = bytes[1];
-            },
+            }
             DE => {
                 self.d = bytes[0];
                 self.e = bytes[1];
-            },
+            }
             HL => {
                 self.h = bytes[0];
                 self.l = bytes[1];
-            },
+            }
             SP => self.sp = value,
             PC => self.pc = value,
         }
     }
 
     pub fn set_flag(&mut self, flag: Flag, value: bool) {
-        if value {      
+        if value {
             match flag {
                 Zero => self.f |= 0x80,
                 Subtract => self.f |= 0x40,
@@ -158,9 +154,9 @@ impl Cpu {
                 _ => panic!("Invalid flag"),
             }
         }
-    }       
+    }
 
-    pub fn get_flag(&mut self, flag: Flag) -> bool{
+    pub fn get_flag(&mut self, flag: Flag) -> bool {
         match flag {
             Zero => self.f & 0x80 == 0x80,
             Subtract => self.f & 0x40 == 0x40,
@@ -175,7 +171,7 @@ impl Cpu {
         if memory.read_byte(0xFF0F) & memory.read_byte(0xFFFF) != 0 {
             self.halt = false;
         }
-        
+
         // Interrupts is pending
         if memory.read_byte(0xFF0F) != 0 {
             self.halt = false;
@@ -207,7 +203,7 @@ impl Cpu {
             return 20;
         }
 
-        let opcode =self.fetch_opcode(memory);
+        let opcode = self.fetch_opcode(memory);
         self.exectute(opcode, memory)
     }
 
@@ -251,7 +247,7 @@ impl Cpu {
             0x21 => ld_rr_nn(HL, self, memory),
             0x22 => ld_hli_a(self, memory),
             0x23 => inc_rr(HL, self),
-            0x24 => inc_r(H, self), 
+            0x24 => inc_r(H, self),
             0x25 => dec_r(H, self),
             0x26 => ld_r_n(H, self, memory),
             0x27 => daa(self),
@@ -306,7 +302,7 @@ impl Cpu {
             0x55 => ld_r_r(D, L, self),
             0x56 => ld_r_hl(D, self, memory),
             0x57 => ld_r_r(D, A, self),
-            0x58 => ld_r_r(E, B, self),    
+            0x58 => ld_r_r(E, B, self),
             0x59 => ld_r_r(E, C, self),
             0x5a => ld_r_r(E, D, self),
             0x5b => ld_r_r(E, E, self),
@@ -343,7 +339,7 @@ impl Cpu {
             0x78 => ld_r_r(A, B, self),
             0x79 => ld_r_r(A, C, self),
             0x7a => ld_r_r(A, D, self),
-            0x7b => ld_r_r(A, E, self), 
+            0x7b => ld_r_r(A, E, self),
             0x7c => ld_r_r(A, H, self),
             0x7d => ld_r_r(A, L, self),
             0x7e => ld_r_hl(A, self, memory),
@@ -399,7 +395,7 @@ impl Cpu {
             0xad => xor_r(L, self),
             0xae => xor_hl(self, memory),
             0xaf => xor_r(A, self),
-           
+
             0xb0 => or_r(B, self),
             0xb1 => or_r(C, self),
             0xb2 => or_r(D, self),
@@ -438,7 +434,7 @@ impl Cpu {
             0xd1 => pop_rr(DE, self, memory),
             0xd2 => jp_cc_nn(NCarry, self, memory),
             0xd3 => panic!("Not valid opcode"),
-            0xd4 => call_cc_nn(NCarry, self, memory), 
+            0xd4 => call_cc_nn(NCarry, self, memory),
             0xd5 => push_rr(DE, self, memory),
             0xd6 => sub_n(self, memory),
             0xd7 => rst(0x10, self, memory),
@@ -540,7 +536,7 @@ impl Cpu {
             0x2d => sra_r(L, self),
             0x2e => sra_hl(self, memory),
             0x2f => sra_r(A, self),
-            
+
             0x30 => swap_r(B, self),
             0x31 => swap_r(C, self),
             0x32 => swap_r(D, self),
@@ -580,7 +576,7 @@ impl Cpu {
             0x52 => bit_r(D, 2, self),
             0x53 => bit_r(E, 2, self),
             0x54 => bit_r(H, 2, self),
-            0x55 => bit_r(L, 2, self),  
+            0x55 => bit_r(L, 2, self),
             0x56 => bit_hl(2, self, memory),
             0x57 => bit_r(A, 2, self),
             0x58 => bit_r(B, 3, self),
@@ -603,7 +599,7 @@ impl Cpu {
             0x68 => bit_r(B, 5, self),
             0x69 => bit_r(C, 5, self),
             0x6a => bit_r(D, 5, self),
-            0x6b => bit_r(E, 5, self),  
+            0x6b => bit_r(E, 5, self),
             0x6c => bit_r(H, 5, self),
             0x6d => bit_r(L, 5, self),
             0x6e => bit_hl(5, self, memory),
