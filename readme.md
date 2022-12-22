@@ -1,6 +1,10 @@
 # gb_emulator
-
+WIP
 # Screenshots
+Main gameboy screen with debugging widgets:
+![maps](https://user-images.githubusercontent.com/37774352/209233969-15c2b751-456a-4c2f-b4ab-78003500e9eb.gif)
+![misc](https://user-images.githubusercontent.com/37774352/209233975-f489c1ad-8f1b-4d2a-8b16-cd6f6c971266.gif)
+![memory_dump](https://user-images.githubusercontent.com/37774352/209233972-e53d4f13-2f36-472f-8571-feeb80d2cbb5.gif)
 
 # Tests
 
