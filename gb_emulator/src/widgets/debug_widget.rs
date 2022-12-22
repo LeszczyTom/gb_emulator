@@ -7,7 +7,8 @@ pub struct DebugWidget {
     pub register_window: debug::registers::Register,
     pub memory_dump_window: debug::memory_dump::MemoryDump,
     pub controls_window: debug::controls::Controls,
-    pub timer_widget: debug::timer::Timer
+    pub timer_widget: debug::timer::Timer,
+    pub interrupts_widget: debug::interrupts::Interrupts
 }
 
 impl Default for DebugWidget {
@@ -26,6 +27,7 @@ impl Default for DebugWidget {
             memory_dump_window: debug::memory_dump::MemoryDump::default(),
             controls_window: debug::controls::Controls::default(),
             timer_widget: debug::timer::Timer::default(),
+            interrupts_widget: debug::interrupts::Interrupts::default(),
         }
     }
 }
@@ -48,6 +50,7 @@ impl DebugWidget {
                     self.controls_window.show(ctx, gameboy);
                     self.memory_dump_window.show(ctx, &gameboy.mmu);
                     self.timer_widget.show(ctx, &gameboy.mmu);
+                    self.interrupts_widget.show(ctx, &gameboy.mmu);
                 });
     }
 

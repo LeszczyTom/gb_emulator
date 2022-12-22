@@ -6,4 +6,3 @@
     - Background Map
     - Tile data
     - OAM
-- Interrupts

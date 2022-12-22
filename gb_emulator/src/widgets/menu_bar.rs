@@ -80,12 +80,16 @@ impl MenuBar {
                                         debug_widget.memory_dump_window.update_visibility()
                                     }
                                     
-                                    if ui.button("Show controls").clicked() {
+                                    if ui.button("Show Controls").clicked() {
                                         debug_widget.controls_window.update_visibility()
                                     }
 
                                     if ui.button("Show Timer").clicked() {
                                         debug_widget.timer_widget.update_visibility()
+                                    }
+
+                                    if ui.button("Show Interrupts").clicked() {
+                                        debug_widget.interrupts_widget.update_visibility()
                                     }
                                 });
                             });
