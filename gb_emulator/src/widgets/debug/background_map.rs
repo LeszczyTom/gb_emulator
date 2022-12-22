@@ -5,16 +5,24 @@ use eframe::egui;
 const WIDTH: usize = 256;
 const HEIGHT: usize = 256;
 
+#[derive(PartialEq)]
+enum TileMapArea {
+    First,
+    Second,
+}
+
 pub struct BackgroundMap {
     visible: bool,
-    scale: f32,
+    tile_map_area: TileMapArea,
+    viewport_visible: bool,
 }
 
 impl Default for BackgroundMap {
     fn default() -> Self {
         Self {
             visible: true,
-            scale: 1.,
+            tile_map_area: TileMapArea::First,
+            viewport_visible: true,
         }
     }
 }
@@ -30,8 +38,24 @@ impl BackgroundMap {
             .collapsible(false)
             .resizable(false)
             .show(ctx, |ui| {
-                show_tile_map_area_label(ui, mmu);
-                show_tile_map_image(ui, ctx, mmu);
+                ui.horizontal(|ui| {
+                    ui.label("Tile map area:");
+                    if ui
+                        .selectable_label(self.tile_map_area == TileMapArea::First, "9800-9BFF")
+                        .clicked()
+                    {
+                        self.tile_map_area = TileMapArea::First;
+                    }
+
+                    if ui
+                        .selectable_label(self.tile_map_area == TileMapArea::Second, "9C00-9FFF")
+                        .clicked()
+                    {
+                        self.tile_map_area = TileMapArea::Second;
+                    }
+                });
+                ui.checkbox(&mut self.viewport_visible, "Show Viewport");
+                show_tile_map_image(&self.tile_map_area, self.viewport_visible, ui, ctx, mmu);
             });
     }
 
@@ -40,19 +64,19 @@ impl BackgroundMap {
     }
 }
 
-fn show_tile_map_area_label(ui: &mut egui::Ui, mmu: &gameboy::memory::mmu::Mmu) {
-    let lcdc = mmu.read_byte(0xFF40);
-    let tile_map_area = if (lcdc >> 6) & 1 == 0 {
-        "9800-9BFF"
-    } else {
-        "9C00-9FFF"
-    };
-    ui.label(format!("Tile map area: {}", tile_map_area));
-}
+fn show_tile_map_image(
+    tile_map_area: &TileMapArea,
+    viewport_visible: bool,
+    ui: &mut egui::Ui,
+    ctx: &egui::Context,
+    mmu: &gameboy::memory::mmu::Mmu,
+) {
+    let mut tile_map_rgba_array = get_tile_map_rgba_array(tile_map_area, mmu);
+    if viewport_visible {
+        add_viewport_border_to_array(&mut tile_map_rgba_array, mmu);
+    }
 
-fn show_tile_map_image(ui: &mut egui::Ui, ctx: &egui::Context, mmu: &gameboy::memory::mmu::Mmu) {
-    let image =
-        egui::ColorImage::from_rgba_unmultiplied([HEIGHT, WIDTH], &get_tile_map_rgba_array(mmu));
+    let image = egui::ColorImage::from_rgba_unmultiplied([HEIGHT, WIDTH], &tile_map_rgba_array);
 
     let gameboy_screen_texture =
         ctx.load_texture("tile_map_texture", image, egui::TextureOptions::NEAREST);
@@ -63,13 +87,14 @@ fn show_tile_map_image(ui: &mut egui::Ui, ctx: &egui::Context, mmu: &gameboy::me
     );
 }
 
-fn get_tile_map_rgba_array(mmu: &gameboy::memory::mmu::Mmu) -> [u8; WIDTH * HEIGHT * 4] {
+fn get_tile_map_rgba_array(
+    tile_map_area: &TileMapArea,
+    mmu: &gameboy::memory::mmu::Mmu,
+) -> [u8; WIDTH * HEIGHT * 4] {
     let mut res = [0; WIDTH * HEIGHT * 4];
-    let lcdc = mmu.read_byte(0xFF40);
-    let tile_map_area: Range<usize> = if (lcdc >> 6) & 1 == 0 {
-        0x9800..0x9C00
-    } else {
-        0x9C00..0xA000
+    let tile_map_area: Range<usize> = match tile_map_area {
+        TileMapArea::First => 0x9800..0x9C00,
+        TileMapArea::Second => 0x9C00..0xA000,
     };
 
     mmu.get_data()
@@ -83,7 +108,7 @@ fn get_tile_map_rgba_array(mmu: &gameboy::memory::mmu::Mmu) -> [u8; WIDTH * HEIG
                     x,
                     y,
                     mmu.get_data()
-                        .get(0x8000..0x97FF)
+                        .get(0x8000..0x9800)
                         .unwrap()
                         .chunks(16)
                         .nth(*tile_id as usize)
@@ -94,6 +119,27 @@ fn get_tile_map_rgba_array(mmu: &gameboy::memory::mmu::Mmu) -> [u8; WIDTH * HEIG
         });
 
     res
+}
+
+fn add_viewport_border_to_array(array: &mut [u8; WIDTH * HEIGHT * 4], mmu: &gameboy::memory::mmu::Mmu) {
+    let scy = mmu.read_byte(0xFF42) as usize;
+    let scx = mmu.read_byte(0xFF43) as usize;
+
+    for x in 0..145_usize {
+        for y in 0..161_usize {
+            if x == 0 || y == 0 || x == 144 || y == 160 {
+                let x = x.wrapping_add(scy);
+                let y = y.wrapping_add(scx);
+
+                let index = y * 4 + (x * 4) * 256;
+
+                // Paint border Red
+                array[index] = 255; 
+                array[index + 1] = 0; 
+                array[index + 2] = 0; 
+            }
+        }
+    }
 }
 
 fn add_tile_to_array(x: usize, y: usize, tile_data: &[u8], array: &mut [u8; WIDTH * HEIGHT * 4]) {
