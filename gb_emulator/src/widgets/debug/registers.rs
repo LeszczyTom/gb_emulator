@@ -7,7 +7,7 @@ pub struct Register {
 impl Default for Register {
     fn default() -> Self {
         Self { 
-            visible: true, 
+            visible: false, 
         }
     }
 }

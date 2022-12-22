@@ -7,4 +7,3 @@
     - Tile data
     - OAM
 - Interrupts
-- Timer

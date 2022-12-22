@@ -8,7 +8,7 @@ pub struct MemoryDump {
 impl Default for MemoryDump {
     fn default() -> Self {
         Self {
-            visible: true,
+            visible: false,
             starting_address: 0x00,
             max_addresses: 5,
         }

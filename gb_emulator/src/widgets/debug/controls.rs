@@ -20,6 +20,7 @@ impl Controls {
 
         egui::Window::new("Controls")
             .collapsible(false)
+            .resizable(false)
             .open(&mut self.visible)
             .show(ctx, |ui| {
                 let play_label = if gmb.debug_paused { "Paused" } else { "Playing" };

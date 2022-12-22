@@ -83,6 +83,10 @@ impl MenuBar {
                                     if ui.button("Show controls").clicked() {
                                         debug_widget.controls_window.update_visibility()
                                     }
+
+                                    if ui.button("Show Timer").clicked() {
+                                        debug_widget.timer_widget.update_visibility()
+                                    }
                                 });
                             });
                         });
