@@ -38,3 +38,4 @@ Main gameboy screen with debugging widgets:
 
 * [eframe](https://github.com/emilk/eframe_template) = 0.20.1
 * [chrono](https://github.com/chronotope/chrono) = 0.4.23
+* [native-dialog](https://github.com/balthild/native-dialog-rs) = 0.6.3
