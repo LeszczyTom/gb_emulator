@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 pub mod cpu;
 mod gpu;
 pub mod io;
@@ -20,7 +22,7 @@ impl GameBoy {
         Self {
             cpu: cpu::cpu::Cpu::new(),
             ppu: gpu::ppu::Ppu::new(),
-            mmu: memory::mmu::Mmu::new(),
+            mmu: memory::mmu::Mmu::default(),
             timer: io::timer::Timer::new(),
             cycles: 0,
             debug_paused: false,
@@ -51,10 +53,15 @@ impl GameBoy {
         }
     }
 
+    pub fn load_roam(&mut self, rom_path: PathBuf) {
+        self.reset();
+        self.mmu = memory::mmu::Mmu::new(rom_path)
+    }
+
     pub fn reset(&mut self) {
         self.cpu = cpu::cpu::Cpu::new();
         self.ppu = gpu::ppu::Ppu::new();
-        self.mmu = memory::mmu::Mmu::new();
+        self.mmu = memory::mmu::Mmu::default();
         self.timer = io::timer::Timer::new();
         self.cycles = 0;
     }

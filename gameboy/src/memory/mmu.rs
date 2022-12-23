@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 const MEM_SIZE: usize = 0x10000;
 
 pub struct Mmu {
@@ -6,16 +8,33 @@ pub struct Mmu {
     bios_enabled: bool,
 }
 
-impl Mmu {
-    pub fn new() -> Self {
+impl Default for Mmu {
+    fn default() -> Self {
         let bios = match std::fs::read("resources/bios.bin") {
             Ok(bytes) => bytes,
             Err(e) => panic!("Error: {}", e),
         };
 
-        let rom = match std::fs::read("resources/dr_mario.gb") {
+        Self {
+            data: [0; MEM_SIZE],
+            bios: bios.try_into().unwrap_or_else(|v: Vec<u8>| {
+                panic!("Expected a Vec of length {} but it was {}", 100, v.len())
+            }),
+            bios_enabled: true,
+        }
+    }
+}
+
+impl Mmu {
+    pub fn new(rom_path: PathBuf) -> Self {
+        let rom = match std::fs::read(rom_path) {
             Ok(bytes) => bytes,
-            Err(e) => panic!("Error: {}", e),
+            Err(e) => {
+                println!("Error: {}", e);
+                return Self {
+                    ..Default::default()
+                };
+            }
         };
 
         let mut data = [0; MEM_SIZE];
@@ -23,10 +42,7 @@ impl Mmu {
 
         Self {
             data,
-            bios: bios.try_into().unwrap_or_else(|v: Vec<u8>| {
-                panic!("Expected a Vec of length {} but it was {}", 100, v.len())
-            }),
-            bios_enabled: true,
+            ..Default::default()
         }
     }
 

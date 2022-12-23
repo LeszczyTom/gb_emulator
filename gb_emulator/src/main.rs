@@ -98,6 +98,7 @@ impl GameboyEmulatorGUI {
             &mut self.debug_widget,
             &mut self.gameboy_screen_widget,
             &mut self.resize_requested,
+            &mut self.gameboy,
         );
         self.gameboy_screen_widget.show(ctx);
         self.debug_widget.show(

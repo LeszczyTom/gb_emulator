@@ -42,7 +42,7 @@ impl Timer {
 
 #[test]
 fn test_tick() {
-    let mut memory = Mmu::new();
+    let mut memory = Mmu::default();
     let mut timer = Timer::new();
 
     memory.write_byte(0xFF07, 0x4); // Enable timer, set rate to 1024
