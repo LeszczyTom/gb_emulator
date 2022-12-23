@@ -11,7 +11,6 @@ pub struct GameBoy {
     pub cpu: cpu::cpu::Cpu,
     ppu: gpu::ppu::Ppu,
     pub mmu: memory::mmu::Mmu,
-    timer: io::timer::Timer,
     cycles: u8,
     pub debug_paused: bool,
     pub speed: u32,
@@ -23,7 +22,6 @@ impl GameBoy {
             cpu: cpu::cpu::Cpu::new(),
             ppu: gpu::ppu::Ppu::new(),
             mmu: memory::mmu::Mmu::default(),
-            timer: io::timer::Timer::new(),
             cycles: 0,
             debug_paused: false,
             speed: 1,
@@ -35,21 +33,16 @@ impl GameBoy {
             return;
         }
 
+        let mut cycles = 0;
         for _ in 0..(CLOCK_SPEED / fps) * self.speed {
-            // Perform 4_194_304 / fps cycles (1 frame)
-            // If the CPU is halted, it will only wake up when an interrupt occurs.
-            if self.cpu.get_halt(&mut self.mmu) {
-                continue;
+            if !self.cpu.get_halt(&mut self.mmu) && cycles == 0 {
+                cycles = self.cpu.cycle(&mut self.mmu);
             }
 
-            if self.cycles == 0 {
-                // Execute the next instruction when the current instruction is finished.
-                self.cycles = self.cpu.cycle(&mut self.mmu);
-            }
-            self.cycles -= 1;
-
-            self.timer.tick(&mut self.mmu);
-            self.ppu.cycle(frame, &mut self.mmu);
+            cycles += io::interrupts::exectute_interrupts(&mut self.cpu, &mut self.mmu);
+            self.ppu.update(frame, &mut self.mmu);
+            io::timer::update(&mut self.mmu);
+            cycles = cycles.checked_sub(1).unwrap_or(0);
         }
     }
 
@@ -62,7 +55,6 @@ impl GameBoy {
         self.cpu = cpu::cpu::Cpu::new();
         self.ppu = gpu::ppu::Ppu::new();
         self.mmu = memory::mmu::Mmu::default();
-        self.timer = io::timer::Timer::new();
         self.cycles = 0;
     }
 }

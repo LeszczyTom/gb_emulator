@@ -1,98 +1,83 @@
 use crate::memory::mmu::Mmu;
 
-pub struct Timer {
-    pub counter: u16,
-}
+const DIV_LOW_ADDRESS: u16 = 0xFF03;
+const DIV_HIGH_ADDRESS: u16 = 0xFF04;
+const TIMA_ADDRESS: u16 = 0xFF05;
+const TMA_ADDRESS: u16 = 0xFF06;
+const TAC_ADDRESS: u16 = 0xFF07;
 
-impl Timer {
-    pub fn new() -> Self {
-        Self { counter: 0 }
+pub fn update(mmu: &mut Mmu) {
+    increment_divder(mmu);
+
+    if !is_timer_enable(mmu) {
+        return;
     }
 
-    pub fn tick(&mut self, memory: &mut Mmu) {
-        let old_div = u16::from_be_bytes([memory.read_byte(0xFF04), memory.read_byte(0xFF03)]);
+    tick(mmu);
+}
 
-        memory.increment_divider();
+fn tick(mmu: &mut Mmu) {
+    let div_counter: u16 = u16::from_be_bytes([
+        mmu.read_byte(DIV_HIGH_ADDRESS),
+        mmu.read_byte(DIV_LOW_ADDRESS),
+    ]);
 
-        if memory.read_byte(0xFF07) & 0x4 == 0 {
-            return;
-        }
-
-        let tac_mask = match memory.read_byte(0xFF07) & 0x3 {
-            0 => 0x200,
-            1 => 0x8,
-            2 => 0x20,
-            3 => 0x80,
-            _ => unreachable!(),
-        };
-
-        let new_div = u16::from_be_bytes([memory.read_byte(0xFF04), memory.read_byte(0xFF03)]);
-        // when bit 9 go low increment TIMA
-        if (old_div & tac_mask) != 0 && (new_div & tac_mask) == 0 {
-            let tima = memory.read_byte(0xFF05);
-            if tima == 0xFF {
-                memory.write_byte(0xFF05, memory.read_byte(0xFF06));
-                memory.set_interrupt_flag(0x4);
-            } else {
-                memory.write_byte(0xFF05, tima + 1);
-            }
-        }
+    let tac_frequency = get_tac_frequency(mmu);
+    if div_counter & tac_frequency != 0 && div_counter - 1 & tac_frequency == 0 {
+        reset_divider(mmu);
+        increment_tima(mmu);
     }
 }
 
-#[test]
-fn test_tick() {
-    let mut memory = Mmu::default();
-    let mut timer = Timer::new();
+/// Returns true if the timer is enabled, false otherwise.
+fn is_timer_enable(mmu: &mut Mmu) -> bool {
+    mmu.read_byte(TAC_ADDRESS) & 4 == 4
+}
 
-    memory.write_byte(0xFF07, 0x4); // Enable timer, set rate to 1024
-    timer.tick(&mut memory); // Total ticks: 1
-    assert_eq!(memory.read_byte(0xFF04), 0);
-    assert_eq!(memory.read_byte(0xFF05), 0);
+/// Increment the divider register. The divider register is on 2 bytes. When the lower byte overflow, the higher byte is incremented.
+fn increment_divder(mmu: &mut Mmu) {
+    let div_low = mmu.read_byte(DIV_LOW_ADDRESS);
 
-    for _ in 0..255 {
-        // Total ticks: 256
-        timer.tick(&mut memory);
+    if div_low == 255 {
+        mmu.reset_div_low();
+        mmu.increment_div_high();
+        return;
     }
-    assert_eq!(memory.read_byte(0xFF04), (256 / 256) as u8); // 0
-    assert_eq!(memory.read_byte(0xFF05), (256 / 1024) as u8); // 0
 
-    for _ in 0..256 {
-        // Total ticks: 512
-        timer.tick(&mut memory);
-    }
-    assert_eq!(memory.read_byte(0xFF04), (512 / 256) as u8); // 2
-    assert_eq!(memory.read_byte(0xFF05), (512 / 1024) as u8); // 0
+    mmu.increment_div_low();
+}
 
-    for _ in 0..512 {
-        // Total ticks: 1024
-        timer.tick(&mut memory);
-    }
-    assert_eq!(memory.read_byte(0xFF04), (1024 / 256) as u8); // 4
-    assert_eq!(memory.read_byte(0xFF05), (1024 / 1024) as u8); // 1
+/// Reset the divider register. The divider register is on 2 bytes, so both bytes are set to 0.
+fn reset_divider(mmu: &mut Mmu) {
+    mmu.reset_div_low();
+    mmu.reset_div_high();
+}
 
-    for _ in 0..260_096 {
-        // Total ticks: 261_120
-        timer.tick(&mut memory);
-    }
-    assert_eq!(memory.read_byte(0xFF04), (261_120 / 256) as u8); // 0xFC
-    assert_eq!(memory.read_byte(0xFF05), (261_120 / 1024) as u8); // 0xFF
+/// Increment the TIMA register. If the TIMA register overflow, the TMA register is copied to the TIMA register and the interrupt flag is set.
+fn increment_tima(mmu: &mut Mmu) {
+    let tima = mmu.read_byte(TIMA_ADDRESS);
 
-    let mut total_cycle = 261_120;
-    for _ in 0..1_048_576 {
-        // Total ticks: 1_309_696
-        total_cycle += 1;
-        timer.tick(&mut memory);
-        assert_eq!(memory.read_byte(0xFF04), (total_cycle / 256) as u8);
-        assert_eq!(memory.read_byte(0xFF05), (total_cycle / 1024) as u8);
+    if tima == 255 {
+        mmu.write_byte(TIMA_ADDRESS, mmu.read_byte(TMA_ADDRESS));
+        mmu.set_interrupt_flag(2);
+        return;
     }
-    assert_eq!(memory.read_byte(0xFF04), (1_309_696 / 256) as u8);
-    assert_eq!(memory.read_byte(0xFF05), (1_309_696 / 1024) as u8);
 
-    memory.write_byte(0xFF06, 0x15);
-    for _ in 0..1024 {
-        timer.tick(&mut memory);
+    mmu.write_byte(TIMA_ADDRESS, tima + 1);
+}
+
+/// Returns the frequency of the timer.
+/// Bits 1-0 - Input Clock Select
+/// 00: CPU Clock / 1024 (DMG, SGB2, CGB Single Speed Mode:   4096 Hz, SGB1:   ~4194 Hz, CGB Double Speed Mode:   8192 Hz)
+/// 01: CPU Clock / 16   (DMG, SGB2, CGB Single Speed Mode: 262144 Hz, SGB1: ~268400 Hz, CGB Double Speed Mode: 524288 Hz)
+/// 10: CPU Clock / 64   (DMG, SGB2, CGB Single Speed Mode:  65536 Hz, SGB1:  ~67110 Hz, CGB Double Speed Mode: 131072 Hz)
+/// 11: CPU Clock / 256  (DMG, SGB2, CGB Single Speed Mode:  16384 Hz, SGB1:  ~16780 Hz, CGB Double Speed Mode:  32768 Hz)
+fn get_tac_frequency(mmu: &mut Mmu) -> u16 {
+    match mmu.read_byte(TAC_ADDRESS) & 0x3 {
+        0 => 512,
+        1 => 8,
+        2 => 32,
+        3 => 128,
+        _ => unreachable!(),
     }
-    assert_eq!(memory.read_byte(0xFF04), 0);
-    assert_eq!(memory.read_byte(0xFF05), 0x15);
 }

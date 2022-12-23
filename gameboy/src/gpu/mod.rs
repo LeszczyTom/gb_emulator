@@ -1,3 +1,2 @@
-mod fetcher;
-mod fifo;
+pub mod lcdc;
 pub mod ppu;

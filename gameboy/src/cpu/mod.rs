@@ -1,6 +1,6 @@
 pub mod cpu;
 mod gmb_16_bit_arithmetic_logical_commands;
-mod gmb_16_bit_loadcommands;
+pub mod gmb_16_bit_loadcommands;
 mod gmb_8_bit_arithmetic_logical_commands;
 mod gmb_8_bit_loadcommands;
 mod gmb_cpu_controlcommands;

@@ -62,6 +62,7 @@ impl Mmu {
         if self.bios_enabled & (addr < 0x100) {
             return self.bios[addr as usize];
         }
+        // if addr == 0xFF00 {}
         self.data[addr as usize]
     }
 
@@ -72,8 +73,13 @@ impl Mmu {
             0xFF50 => self.set_bios_enabled(val == 0),
             0xFF04 => {
                 // Reset timer registers if writting to DIV
+                self.data[0xFF03] = 0;
                 self.data[0xFF04] = 0;
                 self.data[0xFF05] = 0;
+            }
+            0xFF44 => {
+                // Reset LY register if writting to it
+                self.data[0xFF44] = 0;
             }
             0xFF01 => {
                 // Serial debug
@@ -87,20 +93,35 @@ impl Mmu {
         self.data[0xFF44]
     }
 
-    pub fn set_ly(&mut self, val: u8) {
-        self.data[0xFF44] = val;
+    pub fn get_scy(&self) -> usize {
+        self.data[0xFF42] as usize
     }
 
-    pub fn get_scy(&self) -> u8 {
-        self.data[0xFF42]
+    pub fn increment_ly(&mut self) {
+        self.data[0xFF44] += 1;
     }
 
-    pub fn get_scx(&self) -> u8 {
-        self.data[0xFF43]
+    pub fn get_scx(&self) -> usize {
+        self.data[0xFF43] as usize
+    }
+
+    pub fn get_wx(&self) -> usize {
+        self.data[0xFF4B] as usize
+    }
+
+    pub fn get_wy(&self) -> usize {
+        self.data[0xFF4A] as usize
     }
 
     pub fn get_background_palette(&self, index: u8) -> usize {
         (self.data[0xFF47] >> (index * 2) & 0x3) as usize
+    }
+
+    pub fn get_object_palette(&self, index: u8, opb0: bool) -> usize {
+        if opb0 {
+            return (self.data[0xFF48] >> (index * 2) & 0x3) as usize;
+        }
+        return (self.data[0xFF49] >> (index * 2) & 0x3) as usize;
     }
 
     pub fn set_stat_mode_flag(&mut self, mode: u8) {
@@ -108,21 +129,23 @@ impl Mmu {
     }
 
     pub fn set_interrupt_flag(&mut self, flag: u8) {
-        self.data[0xFF0F] |= flag;
+        self.data[0xFF0F] |= 1 << flag;
     }
 
-    pub fn increment_divider(&mut self) {
-        if self.data[0xFF03] == 0xFF {
-            if self.data[0xFF04] == 0xFF {
-                self.data[0xFF04] = 0;
-                self.data[0xFF03] = 0;
-            } else {
-                self.data[0xFF03] = 0;
-                self.data[0xFF04] += 1;
-            }
-        } else {
-            self.data[0xFF03] += 1;
-        }
+    pub fn increment_div_high(&mut self) {
+        self.data[0xFF04] = self.data[0xFF04].checked_add(1).unwrap_or(0);
+    }
+
+    pub fn reset_div_low(&mut self) {
+        self.data[0xFF03] = 0;
+    }
+
+    pub fn reset_div_high(&mut self) {
+        self.data[0xFF04] = 0;
+    }
+
+    pub fn increment_div_low(&mut self) {
+        self.data[0xFF03] += 1;
     }
 
     pub fn _dump_hex(&self, start: usize, end: usize) {
@@ -136,6 +159,10 @@ impl Mmu {
             cpt -= 1;
         }
         println!("|");
+    }
+
+    pub fn get_oam_slice(&self) -> &[u8] {
+        &self.data[0xFE00..0xFEA0]
     }
 
     pub fn get_tile(&self, index: usize) -> [u8; 16] {
