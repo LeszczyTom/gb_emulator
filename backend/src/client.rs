@@ -13,9 +13,9 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(a: websocket::sync::Client<TcpStream>, id: Uuid) -> Result<Self> {
+    pub fn new(ws_client: websocket::sync::Client<TcpStream>, id: Uuid) -> Result<Self> {
         println!("Client {} connected", id.to_string());
-        let (mut ws_receiver, mut ws_sender) = a.split()?;
+        let (mut ws_receiver, mut ws_sender) = ws_client.split()?;
         let (sender, receiver) = crossbeam_channel::unbounded::<Message>();
         let (sender_clone, _) = (sender.clone(), receiver.clone());
 
@@ -23,22 +23,32 @@ impl Client {
             if let Ok(message) = receiver.recv() {
                 match message {
                     Message::Ping(ping) => {
-                        ws_sender.send_message(&OwnedMessage::Pong(ping)).unwrap();
+                        if let Err(err) = ws_sender.send_message(&OwnedMessage::Pong(ping)) {
+                            println!("{err}");
+                        }
                     }
                     Message::Pong(pong) => {
-                        ws_sender.send_message(&OwnedMessage::Ping(pong)).unwrap()
+                        if let Err(err) = ws_sender.send_message(&OwnedMessage::Ping(pong)) {
+                            println!("{err}");
+                        }
                     }
                     Message::Close => {
-                        ws_sender.send_message(&OwnedMessage::Close(None)).unwrap();
-                        println!("Client {} disconnected", id.to_string());
-                        return;
+                        if let Err(err) = ws_sender.send_message(&OwnedMessage::Close(None)) {
+                            println!("{err}");
+                        } else {
+                            println!("Client {} disconnected", id.to_string());
+                        }
                     }
                     Message::Text(text) => {
-                        ws_sender.send_message(&OwnedMessage::Text(text)).unwrap()
+                        if let Err(err) = ws_sender.send_message(&OwnedMessage::Text(text)) {
+                            println!("{err}");
+                        }
                     }
-                    Message::Binary(value) => ws_sender
-                        .send_message(&OwnedMessage::Binary(value))
-                        .unwrap(),
+                    Message::Binary(value) => {
+                        if let Err(err) = ws_sender.send_message(&OwnedMessage::Binary(value)) {
+                            println!("{err}");
+                        }
+                    }
                 }
             }
         });

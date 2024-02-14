@@ -19,16 +19,25 @@ fn main() -> Result<()> {
     let mut websocket_server: WebsocketServer = WebsocketServer::new(clients.clone());
     websocket_server.start("127.0.0.1:2794")?;
 
+    let width: usize = 500;
+    let height: usize = 500;
+    let image_size = width * height;
+
+    let mut color: u8 = 0;
+
     loop {
+        color = color.wrapping_add(1);
+
         for client in clients.lock().unwrap().values_mut() {
-            client.send_message(message::Message::Text(format!(
-                "Sent at {:?}",
-                std::time::SystemTime::now()
-            )))?;
+            let mut image_data: Vec<u8> = Vec::new();
+
+            for _ in 0..image_size {
+                image_data.append(&mut vec![color, color, color, 255]);
+            }
+
+            client.send_message(message::Message::Binary(image_data))?;
         }
 
         sleep(Duration::from_millis(33));
     }
-
-    Ok(())
 }
