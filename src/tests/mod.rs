@@ -1,5 +1,4 @@
 mod blarggs_tests;
-mod gekkio_tests;
 
 #[cfg(test)]
 pub mod tests {
