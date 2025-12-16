@@ -6,6 +6,11 @@ use crate::instructions::instruction::{
 use crate::mmu::MMU;
 use crate::timer::Timer;
 
+#[cfg(test)]
+const PASSED_BLARGG: [u8; 6] = [80, 97, 115, 115, 101, 100];
+#[cfg(test)]
+const FAILED_BLARGG: [u8; 6] = [70, 97, 105, 108, 101, 100];
+
 #[derive(Default)]
 pub struct Core {
     pub(crate) cpu: CPU,
@@ -35,10 +40,33 @@ impl Core {
             }
 
             #[cfg(test)]
-            if let Some(value) = self.mmu.test_passed {
+            if let Some(value) = self.test_ended() {
                 return value;
             }
         }
+    }
+
+    #[cfg(test)]
+    fn test_ended(&self) -> Option<bool> {
+        if self.mmu.serial_output == PASSED_BLARGG {
+            return Some(true);
+        }
+
+        if self.mmu.serial_output == FAILED_BLARGG {
+            return Some(false);
+        }
+
+        if self.cpu.bc.get() == 0x0305 && self.cpu.de.get() == 0x080D && self.cpu.hl.get() == 0x1522
+        {
+            return Some(true);
+        }
+
+        if self.cpu.bc.get() == 0x4242 && self.cpu.de.get() == 0x4242 && self.cpu.hl.get() == 0x4242
+        {
+            return Some(false);
+        }
+
+        return None;
     }
 
     fn execute_instruction(&mut self, opcode: usize) -> u8 {
@@ -55,8 +83,8 @@ impl Core {
                 self.cpu.condition_met = false;
 
                 match opcode {
-                    0x20 | 0x28 | 0x30 | 0x38 | 0xC2 | 0xCA | 0xD2 | 0xDA => cycles += 4,
-                    0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xC4 | 0xCC | 0xD4 | 0xDC => cycles += 12,
+                    0x20 | 0x28 | 0x30 | 0x38 | 0xC2 | 0xCA | 0xD2 | 0xDA => cycles += 1,
+                    0xC0 | 0xC8 | 0xD0 | 0xD8 | 0xC4 | 0xCC | 0xD4 | 0xDC => cycles += 3,
                     _ => (),
                 }
             }

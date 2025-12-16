@@ -24,7 +24,7 @@ impl Timer {
         for _ in 0..cycles {
             self.div_ticks += 1;
 
-            if self.div_ticks >= 256 {
+            if self.div_ticks >= 64 {
                 self.div_ticks = 0;
                 let div = mmu.get(DIV_ADDRESS).wrapping_add(1);
                 mmu.mem[DIV_ADDRESS as usize] = div;
@@ -52,10 +52,10 @@ impl Timer {
 
     fn get_tima_frequency(&self, tac: u8) -> u16 {
         return match tac & 0b11 {
-            0b00 => 1024,
-            0b01 => 16,
-            0b10 => 64,
-            0b11 => 256,
+            0b00 => 256,
+            0b01 => 4,
+            0b10 => 16,
+            0b11 => 64,
             _ => unreachable!("Something went worng with TIMA"),
         };
     }

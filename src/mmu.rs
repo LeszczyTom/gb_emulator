@@ -2,18 +2,11 @@ use std::path::PathBuf;
 
 const MEMORY_SIZE: usize = u16::MAX as usize + 1;
 
-#[cfg(test)]
-const PASSED: [u8; 6] = [80, 97, 115, 115, 101, 100];
-#[cfg(test)]
-const FAILED: [u8; 6] = [70, 97, 105, 108, 101, 100];
-
 pub struct MMU {
     pub(crate) mem: [u8; MEMORY_SIZE],
 
     #[cfg(test)]
-    pub(crate) test_passed: Option<bool>,
-    #[cfg(test)]
-    serial_output: [u8; 6],
+    pub(crate) serial_output: [u8; 6],
 }
 
 impl Default for MMU {
@@ -21,8 +14,6 @@ impl Default for MMU {
         MMU {
             mem: [0; MEMORY_SIZE],
 
-            #[cfg(test)]
-            test_passed: None,
             #[cfg(test)]
             serial_output: [0; 6],
         }
@@ -58,15 +49,7 @@ impl MMU {
         #[cfg(test)]
         {
             self.serial_output.rotate_left(1);
-            self.serial_output[PASSED.len() - 1] = value;
-
-            if self.serial_output == PASSED {
-                self.test_passed = Some(true);
-            }
-
-            if self.serial_output == FAILED {
-                self.test_passed = Some(false);
-            }
+            *self.serial_output.last_mut().unwrap() = value;
         }
     }
 
