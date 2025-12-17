@@ -112,8 +112,9 @@ pub fn cp_a_imm8(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>))
 
 pub fn ret_cond(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
     if let Parameters::Cond(cond) = p.0.as_ref().unwrap() {
+        core.tick_timer(1);
+
         if core.is_condition_met(cond) {
-            core.cpu.condition_met = true;
             ret(core, p);
         }
 
@@ -126,6 +127,7 @@ pub fn ret_cond(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
 pub fn ret(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let value = core.pop();
     core.cpu.pc.set(value);
+    core.tick_timer(1);
 }
 
 pub fn reti(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
@@ -138,8 +140,8 @@ pub fn jp_cond_imm16(core: &mut Core, p: &(Option<Parameters>, Option<Parameters
         let address = core.fetch_imm16();
 
         if core.is_condition_met(cond) {
-            core.cpu.condition_met = true;
             core.cpu.pc.set(address);
+            core.tick_timer(1);
         }
 
         return;
@@ -150,6 +152,7 @@ pub fn jp_cond_imm16(core: &mut Core, p: &(Option<Parameters>, Option<Parameters
 pub fn jp_imm16(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let address = core.fetch_imm16();
     core.cpu.pc.set(address);
+    core.tick_timer(1);
 }
 
 pub fn jp_hl(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
@@ -162,9 +165,9 @@ pub fn call_cond_imm16(core: &mut Core, p: &(Option<Parameters>, Option<Paramete
         let addr = core.fetch_imm16();
 
         if core.is_condition_met(cond) {
-            core.cpu.condition_met = true;
             core.push(core.cpu.pc.get());
             core.cpu.pc.set(addr);
+            core.tick_timer(1);
         }
 
         return;
@@ -177,12 +180,15 @@ pub fn call_imm16(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)
     let addr = core.fetch_imm16();
     core.push(core.cpu.pc.get());
     core.cpu.pc.set(addr);
+    core.tick_timer(1);
 }
 
 pub fn rst_tgt3(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
     if let Parameters::Tgt3(tgt3) = p.0.as_ref().unwrap() {
         core.push(core.cpu.pc.get());
         core.cpu.pc.set(*tgt3);
+        core.tick_timer(1);
+
         return;
     }
     unreachable!()
@@ -206,7 +212,9 @@ pub fn pop_r16stk(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>))
 pub fn push_r16stk(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
     if let Parameters::R16stk(r16stk) = p.0.as_ref().unwrap() {
         let value = core.get_r16stk(r16stk);
+        core.tick_timer(1);
         core.push(value);
+
         return;
     }
 
@@ -220,36 +228,36 @@ pub fn prefix(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
 pub fn ldh_c_a(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let address = (core.cpu.bc.get_low() as u16).wrapping_add(0xFF00);
     let value = core.cpu.af.get_high();
-    core.mmu.set(value, address);
+    core.mem_set(value, address);
 }
 
 pub fn ldh_imm8_a(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let addr = u16::from_be_bytes([0xff, core.fetch_imm8()]);
-    core.mmu.set(core.cpu.af.get_high(), addr);
+    core.mem_set(core.cpu.af.get_high(), addr);
 }
 
 pub fn ld_imm16_a(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let address = core.fetch_imm16();
     let value = core.cpu.af.get_high();
 
-    core.mmu.set(value, address);
+    core.mem_set(value, address);
 }
 
 pub fn ldh_a_c(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let address = (core.cpu.bc.get_low() as u16).wrapping_add(0xFF00);
-    let value = core.mmu.get(address);
+    let value = core.mem_get(address);
     core.cpu.af.set_high(value);
 }
 
 pub fn ldh_a_imm8(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let addr = u16::from_be_bytes([0xff, core.fetch_imm8()]);
-
-    core.cpu.af.set_high(core.mmu.get(addr));
+    let value = core.mem_get(addr);
+    core.cpu.af.set_high(value);
 }
 
 pub fn ld_a_imm16(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let imm16 = core.fetch_imm16();
-    let value = core.mmu.get(imm16);
+    let value = core.mem_get(imm16);
     core.cpu.af.set_high(value);
 }
 
@@ -257,12 +265,16 @@ pub fn add_sp_imm8(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>
     let sp = core.cpu.sp.get();
     let e8 = core.fetch_imm8() as i8 as u16;
     let result = core.cpu.sp.get().wrapping_add(e8);
+    core.tick_timer(1);
+
     core.cpu.sp.set(result);
 
     core.cpu.set_flag(Z, false);
     core.cpu.set_flag(N, false);
     core.cpu.set_flag(H, (sp ^ e8 ^ result) & 0x10 == 0x10);
     core.cpu.set_flag(C, (sp ^ e8 ^ result) & 0x100 == 0x100);
+
+    core.tick_timer(1);
 }
 
 pub fn ld_hl_sp_imm8(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
@@ -276,11 +288,14 @@ pub fn ld_hl_sp_imm8(core: &mut Core, _p: &(Option<Parameters>, Option<Parameter
     core.cpu.set_flag(N, false);
     core.cpu.set_flag(H, (sp ^ e8 ^ result) & 0x10 == 0x10);
     core.cpu.set_flag(C, (sp ^ e8 ^ result) & 0x100 == 0x100);
+
+    core.tick_timer(1);
 }
 
 pub fn ld_sp_hl(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {
     let value = core.cpu.hl.get();
     core.cpu.sp.set(value);
+    core.tick_timer(1);
 }
 
 pub fn di(core: &mut Core, _p: &(Option<Parameters>, Option<Parameters>)) {

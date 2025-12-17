@@ -6,6 +6,7 @@ pub fn ld_r8_r8(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
 
         if let Parameters::R8(r8) = p.0.as_ref().unwrap() {
             core.set_r8(r8, value);
+
             return;
         }
     }

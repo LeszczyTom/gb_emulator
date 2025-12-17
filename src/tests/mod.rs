@@ -1,3 +1,4 @@
+#[cfg(test)]
 mod blarggs_tests;
 
 #[cfg(test)]
@@ -33,7 +34,7 @@ pub mod tests {
             core.cpu.hl.set(0x014D);
             core.cpu.sp.set(0xFFFE);
             core.cpu.pc.set(0x0100);
-            core.mmu.mem[0xFF44] = 0xFF;
+            core.mmu.mem[0xFF44] = 0x90;
             core.mmu.mem[0xFF02] = 0xFF;
 
             core.mmu

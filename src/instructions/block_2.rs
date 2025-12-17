@@ -91,6 +91,7 @@ pub fn and_a_r8(core: &mut Core, p: &(Option<Parameters>, Option<Parameters>)) {
         core.cpu.set_flag(C, false);
         core.cpu.set_flag(H, true);
         core.cpu.set_flag(N, false);
+
         return;
     }
 

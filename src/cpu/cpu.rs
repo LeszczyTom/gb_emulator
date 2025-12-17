@@ -19,7 +19,6 @@ pub struct CPU {
     pub(crate) halted: bool,
     pub(crate) ime: bool,
     pub(crate) cb: bool,
-    pub(crate) condition_met: bool,
     pub(crate) set_ime: Option<u8>,
 }
 
@@ -40,13 +39,16 @@ impl CPU {
         return ((self.af.get_low() >> flag as u8) & 1) == 1;
     }
 
-    pub fn set_ime(&mut self) {
+    pub fn set_ime(&mut self, cycles: u8) {
         if let Some(value) = self.set_ime {
-            if value == 0 {
-                self.ime = true;
-                self.set_ime = None;
-            } else {
-                self.set_ime = Some(value - 1);
+            for _ in 0..cycles {
+                if value == 0 {
+                    self.ime = true;
+                    self.set_ime = None;
+                    return;
+                } else {
+                    self.set_ime = Some(value - 1);
+                }
             }
         }
     }
