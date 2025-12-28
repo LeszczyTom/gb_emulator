@@ -1,0 +1,13 @@
+[package]
+name = "display"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2"
+gb_core = {version = "0.1.0", path = "../Janky_Emu"}
+web-sys = { version ="0.3.83", features= ["console"]}
+console_error_panic_hook = "0.1.7"

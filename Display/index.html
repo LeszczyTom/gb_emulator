@@ -1,0 +1,67 @@
+<canvas
+  id="screen"
+  width="160"
+  height="144"
+  style="width: 480px; height: 432px; border: 1px solid red"
+></canvas>
+
+<script type="module">
+  const WIDTH = 160;
+  const HEIGHT = 144;
+  const BUFFER_SIZE = 160 * 144 * 4;
+
+  async function loadROM(url) {
+    const response = await fetch(url);
+    const buffer = await response.arrayBuffer();
+    return new Uint8Array(buffer);
+  }
+
+  import init, { Game } from "./pkg/display.js";
+
+  const wasm = await init();
+  let memory = wasm.memory;
+  let game = Game.new();
+  const bios = await loadROM("gb_bios.bin");
+  if (game.read_bios(bios, bios.length)) {
+    console.log("gb_bios.bin loaded");
+  }
+
+  // let rom_path = "Dr. Mario.gb";
+  // let rom_path = "Tetris.gb";
+  let rom_path = "dmg-acid2.gb";
+  const rom = await loadROM(rom_path);
+  if (game.read_rom(rom, rom.length)) {
+    console.log("acid2.gb loaded");
+  }
+
+  const canvas = document.getElementById("screen");
+  const ctx = canvas.getContext("2d");
+  ctx.imageSmoothingEnabled = false;
+  const image = ctx.createImageData(WIDTH, HEIGHT);
+  let index = 0;
+
+  const frame_rate = 30;
+  const fps = (1 / frame_rate) * 1000;
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const renderLoop = async () => {
+    await sleep(fps);
+    game.tick(1);
+    const ptr = game.buffer_ptr();
+    const pixels = new Uint8Array(memory.buffer, ptr, BUFFER_SIZE);
+    image.data.set(pixels);
+    ctx.putImageData(image, 0, 0);
+
+    requestAnimationFrame(renderLoop);
+  };
+
+  // for (let i = 1; i != 2; i++) {
+  //   game.tick(fps);
+  //   const ptr = game.buffer_ptr();
+  //   const pixels = new Uint8Array(memory.buffer, ptr, BUFFER_SIZE);
+  //   // console.log(pixels);
+  //   image.data.set(pixels);
+  //   ctx.putImageData(image, 0, 0);
+  // }
+
+  requestAnimationFrame(renderLoop);
+</script>
