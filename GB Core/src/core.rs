@@ -189,9 +189,6 @@ impl Core {
 
     fn fetch_opcode(&mut self) -> usize {
         let pc = self.cpu.pc.get();
-        if pc == 0x100 {
-            self.mmu.bios_read = true;
-        }
         let opcode = self.mmu.get(pc);
 
         // Halt && CB

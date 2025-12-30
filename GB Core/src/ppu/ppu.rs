@@ -22,6 +22,16 @@ impl PPU {
             return None;
         }
 
+        if mmu.ly() == mmu.lyc() {
+            if !mmu.ly_eq_ly() && mmu.lyc_int_select() {
+                mmu.set_interrupt_flag(1);
+            }
+
+            mmu.set_lyc_eq_ly();
+        } else {
+            mmu.unset_lyc_eq_ly();
+        }
+
         let result = match mmu.ppu_mode() {
             0 => {
                 if mmu.ly() == 144 {
@@ -36,6 +46,7 @@ impl PPU {
                 if mmu.ly() == 154 {
                     mmu.set_ppu_mode(2);
                     self.dots = 0;
+                    mmu.mem[0xFF44] = 0
                 }
                 None
             } // mode 1
@@ -63,29 +74,9 @@ impl PPU {
         self.dots += 1;
 
         if self.dots % 456 == 0 {
-            self.increment_ly(mmu);
+            mmu.mem[0xFF44] = mmu.mem[0xFF44].wrapping_add(1);
         }
 
         return result;
-    }
-
-    fn increment_ly(&mut self, mmu: &mut MMU) {
-        let ly = mmu.ly().wrapping_add(1);
-
-        if ly == 154 {
-            mmu.mem[0xFF44] = 0
-        } else {
-            mmu.mem[0xFF44] = ly;
-        }
-
-        if mmu.ly() == mmu.get(0xFF45) {
-            mmu.set_lyc_eq_ly();
-
-            if mmu.lyc_int_select() {
-                mmu.set_interrupt_flag(1);
-            }
-        } else {
-            mmu.unset_lyc_eq_ly();
-        }
     }
 }
