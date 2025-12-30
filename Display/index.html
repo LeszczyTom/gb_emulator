@@ -1,3 +1,5 @@
+<button id="toggle">Stop</button>
+
 <canvas
   id="screen"
   width="160"
@@ -6,6 +8,12 @@
 ></canvas>
 
 <script type="module">
+  let flag = false;
+
+  document.getElementById("toggle").onclick = () => {
+    flag = !flag;
+  };
+
   const WIDTH = 160;
   const HEIGHT = 144;
   const BUFFER_SIZE = 160 * 144 * 4;
@@ -26,13 +34,13 @@
     console.log("gb_bios.bin loaded");
   }
 
-  // let rom_path = "Dr. Mario.gb";
+  //let rom_path = "Dr. Mario.gb";
   // let rom_path = "Tetris.gb";
-  let rom_path = "dmg-acid2.gb";
-  const rom = await loadROM(rom_path);
-  if (game.read_rom(rom, rom.length)) {
-    console.log("acid2.gb loaded");
-  }
+  // let rom_path = "dmg-acid2.gb";
+  // const rom = await loadROM(rom_path);
+  // if (game.read_rom(rom, rom.length)) {
+  //   console.log("acid2.gb loaded");
+  // }
 
   const canvas = document.getElementById("screen");
   const ctx = canvas.getContext("2d");
@@ -44,14 +52,16 @@
   const fps = (1 / frame_rate) * 1000;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const renderLoop = async () => {
-    await sleep(fps);
-    game.tick(1);
-    const ptr = game.buffer_ptr();
-    const pixels = new Uint8Array(memory.buffer, ptr, BUFFER_SIZE);
-    image.data.set(pixels);
-    ctx.putImageData(image, 0, 0);
+    if (!flag) {
+      await sleep(fps);
+      game.tick(1);
+      const ptr = game.buffer_ptr();
+      const pixels = new Uint8Array(memory.buffer, ptr, BUFFER_SIZE);
+      image.data.set(pixels);
+      ctx.putImageData(image, 0, 0);
 
-    requestAnimationFrame(renderLoop);
+      requestAnimationFrame(renderLoop);
+    }
   };
 
   // for (let i = 1; i != 2; i++) {
