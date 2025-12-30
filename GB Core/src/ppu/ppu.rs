@@ -66,6 +66,16 @@ impl PPU {
             self.increment_ly(mmu);
         }
 
+        if mmu.ly() == mmu.lyc() {
+            if !mmu.ly_eq_ly() && mmu.lyc_int_select() {
+                mmu.set_interrupt_flag(1);
+            }
+
+            mmu.set_lyc_eq_ly();
+        } else {
+            mmu.unset_lyc_eq_ly();
+        }
+
         return result;
     }
 
@@ -76,16 +86,6 @@ impl PPU {
             mmu.mem[0xFF44] = 0
         } else {
             mmu.mem[0xFF44] = ly;
-        }
-
-        if mmu.ly() == mmu.get(0xFF45) {
-            mmu.set_lyc_eq_ly();
-
-            if mmu.lyc_int_select() {
-                mmu.set_interrupt_flag(1);
-            }
-        } else {
-            mmu.unset_lyc_eq_ly();
         }
     }
 }

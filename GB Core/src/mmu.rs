@@ -5,7 +5,7 @@ use crate::log;
 const MEMORY_SIZE: usize = u16::MAX as usize + 1;
 
 pub struct MMU {
-    pub bios: [u8; 0x101],
+    pub bios: [u8; 0x100],
     pub mem: [u8; MEMORY_SIZE],
     pub bios_read: bool,
 
@@ -16,8 +16,8 @@ pub struct MMU {
 impl Default for MMU {
     fn default() -> MMU {
         MMU {
-            bios: [0; 0x101],
-            mem: [0; MEMORY_SIZE],
+            bios: [0; 0x100],
+            mem: [0xFF; MEMORY_SIZE],
             bios_read: false,
 
             #[cfg(test)]
@@ -71,6 +71,9 @@ impl MMU {
         return self.mem[0xFF44];
     }
 
+    pub fn lyc(&self) -> u8 {
+        return self.get(0xFF45);
+    }
     pub fn lyc_int_select(&self) -> bool {
         return self.lcds() >> 6 & 1 == 1;
     }
@@ -100,19 +103,24 @@ impl MMU {
             self.set_interrupt_flag(1);
         }
 
-        self.mem[0xFF41] = (self.mem[0xFF41] & !0b11) | mode;
+        self.mem[0xFF41] = (self.mem[0xFF41] & 0b1111_1100) | mode;
     }
 
     pub fn ppu_mode(&self) -> u8 {
         return self.lcds() & 0b11;
     }
 
+    pub fn ly_eq_ly(&self) -> bool {
+        return (self.lcds() >> 2) & 1 == 1;
+    }
+
     pub fn set_lyc_eq_ly(&mut self) {
+        // self.mem[0xFF41] |= 0b0000_0100;
         self.mem[0xFF41] = self.lcds() & 0b100;
     }
 
     pub fn unset_lyc_eq_ly(&mut self) {
-        self.mem[0xFF41] = self.lcds() & !0b100;
+        self.mem[0xFF41] &= 0b1111_1011;
     }
 
     pub fn lcdc(&self) -> u8 {
@@ -129,6 +137,10 @@ impl MMU {
 
     pub fn bg_window_tile(&self) -> bool {
         return (self.lcdc() >> 4) & 1 == 1;
+    }
+
+    pub fn window_enabled(&self) -> bool {
+        return (self.lcdc() >> 5) & 1 == 1;
     }
 
     pub fn window_tile_map(&self) -> bool {
