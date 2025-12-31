@@ -29,17 +29,17 @@
   const wasm = await init();
   let memory = wasm.memory;
   let game = Game.new();
-  const bios = await loadROM("gb_bios.bin");
+  const bios = await loadROM("roms/gb_bios.bin");
   if (game.read_bios(bios, bios.length)) {
     console.log("gb_bios.bin loaded");
   }
 
   // let rom_path = "Dr. Mario.gb";
   // let rom_path = "Tetris.gb";
-  let rom_path = "dmg-acid2.gb";
+  let rom_path = "roms/resources/blargg/oam_bug/5-timing_bug.gb";
   const rom = await loadROM(rom_path);
   if (game.read_rom(rom, rom.length)) {
-    console.log("acid2.gb loaded");
+    console.log(rom_path + " loaded");
   }
 
   const canvas = document.getElementById("screen");

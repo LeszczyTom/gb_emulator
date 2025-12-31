@@ -134,7 +134,7 @@ impl Core {
             && self.mmu.mem[0xA003] == 0x61
         {
             let status = self.mmu.mem[0xA000];
-            if status != 0x80 && status != 0x67 {
+            if status != 0x80 {
                 println!("Status: {:02X}", status);
 
                 let mut index = 0xA004;

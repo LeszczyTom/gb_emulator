@@ -34,13 +34,32 @@ pub mod tests {
             core.cpu.hl.set(0x014D);
             core.cpu.sp.set(0xFFFE);
             core.cpu.pc.set(0x0100);
-            // core.mmu.mem[0xFF44] = 0x90;
-            core.mmu.mem[0xFF02] = 0xFF;
-            core.mmu.mem[0xA000] = 0x67;
+            // core.mmu.mem[0xFF00] = 0xFF;
+            // core.mmu.mem[0xFF01] = 0x00;
+            // core.mmu.mem[0xFF02] = 0x7E;
+            // core.mmu.mem[0xFF04] = 0xAB;
+            // core.mmu.mem[0xFF05] = 0x00;
+            // core.mmu.mem[0xFF06] = 0x00;
+            // core.mmu.mem[0xFF07] = 0xF8;
+            // core.mmu.mem[0xFF0F] = 0xE1;
+            // core.mmu.mem[0xFF40] = 0x91;
+            // core.mmu.mem[0xFF41] = 0x85;
+            // core.mmu.mem[0xFF42] = 0x00;
+            // core.mmu.mem[0xFF43] = 0x00;
+            core.mmu.mem[0xFF44] = 0x90;
+            // core.mmu.mem[0xFF45] = 0x00;
+            // core.mmu.mem[0xFF46] = 0xFF;
+            // core.mmu.mem[0xFF47] = 0xFC;
+            // core.mmu.mem[0xFF4A] = 0x00;
+            // core.mmu.mem[0xFF4B] = 0x00;
+            // core.mmu.mem[0xFF50] = 1;
+            // core.mmu.mem[0xFFFF] = 0x00;
 
-            core.mmu
-                .load_file(rom_path.into())
-                .expect("Couldn't load file");
+            core.mmu.mem[0xA000] = 0x80;
+            core.mmu.bios_mapped = false;
+
+            let rom = std::fs::read(rom_path).unwrap();
+            core.load_rom(rom.as_slice(), rom.len());
 
             return core.run();
         });
