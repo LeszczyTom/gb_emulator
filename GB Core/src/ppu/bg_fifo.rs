@@ -1,5 +1,3 @@
-use std::mem;
-
 use crate::{log, mmu::MMU, ppu::FetcherState};
 
 pub struct BGFifo {
@@ -114,30 +112,6 @@ impl BGFifo {
         }
     }
 
-    fn tile_y(&self, mmu: &MMU) -> u8 {
-        if self.in_window {
-            mmu.ly()
-        } else {
-            ((mmu.ly() as u16 + mmu.scy() as u16) & 0xFF) as u8
-        }
-    }
-
-    fn tile_map(&self, mmu: &MMU) -> u16 {
-        if self.in_window {
-            if mmu.window_tile_map() {
-                0x9C00
-            } else {
-                0x9800
-            }
-        } else {
-            if mmu.bg_tile_map_area() {
-                0x9C00
-            } else {
-                0x9800
-            }
-        }
-    }
-
     fn fetcher_get_tile(&mut self, mmu: &MMU) {
         if self.in_window {
             let tile_map = if mmu.window_tile_map() {
@@ -167,15 +141,22 @@ impl BGFifo {
     }
 
     fn fetcher_get_tile_data_low(&mut self, mmu: &MMU) {
-        let block_address = if mmu.bg_window_tile() { 0x8000 } else { 0x8800 };
-        let offset = block_address + self.tile_index as u16 * 16;
+        let offset = if mmu.bg_window_tile() {
+            0x8000 + self.tile_index as u16 * 16
+        } else {
+            0x9000 + self.tile_index as i8 as u16 * 16
+        };
+
         let address = offset + (self.tile_y as u16 % 8) * 2;
         self.data_low = mmu.mem[address as usize];
     }
 
     fn fetcher_get_tile_data_high(&mut self, mmu: &MMU) {
-        let block_address = if mmu.bg_window_tile() { 0x8000 } else { 0x8800 };
-        let offset = block_address + self.tile_index as u16 * 16;
+        let offset = if mmu.bg_window_tile() {
+            0x8000 + self.tile_index as u16 * 16
+        } else {
+            0x9000 + self.tile_index as i8 as u16 * 16
+        };
         let address = offset + (self.tile_y as u16 % 8) * 2;
         self.data_high = mmu.mem[address as usize + 1];
     }

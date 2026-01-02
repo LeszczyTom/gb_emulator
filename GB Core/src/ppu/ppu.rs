@@ -125,10 +125,8 @@ impl PPU {
             return None;
         });
 
-        // log!("{:?}", self.oam_fifo.fetcher_x);
         if let Some(index) = object_index {
             self.oam_fifo.object = Some(self.objects.remove(index));
-            // log!("{:?}", self.oam_fifo.object);
         }
 
         let in_window = self.in_window(mmu);
