@@ -77,7 +77,8 @@ impl PPU {
         if mmu.ly() == 154 {
             mmu.set_ppu_mode(2);
             self.dots = 0;
-            mmu.mem[0xFF44] = 0
+            mmu.mem[0xFF44] = 0;
+            self.bg_fifo.window_y = 0;
         }
 
         None
@@ -130,8 +131,11 @@ impl PPU {
             // log!("{:?}", self.oam_fifo.object);
         }
 
+        let in_window = self.in_window(mmu);
+        let obj_fetching = self.oam_fifo.fetching();
+
         self.oam_fifo.tick(mmu);
-        let bg_pixel = self.bg_fifo.tick(mmu, self.oam_fifo.fetching());
+        let bg_pixel = self.bg_fifo.tick(mmu, obj_fetching, in_window);
 
         let output_pixel = if bg_pixel.is_some()
             && let Some((pixel, prio)) = self.oam_fifo.get_pixel()
@@ -154,5 +158,9 @@ impl PPU {
         }
 
         output_pixel
+    }
+
+    fn in_window(&self, mmu: &MMU) -> bool {
+        mmu.window_enabled() && self.x >= mmu.wx() - 7 && mmu.ly() >= mmu.wy()
     }
 }

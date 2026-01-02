@@ -1,13 +1,8 @@
-use crate::{log, mmu::MMU, ppu::object::OamObject};
-
-#[derive(PartialEq, Debug)]
-enum FetcherState {
-    GetTile,
-    GetTileDataLow,
-    GetTileDataHigh,
-    Sleep,
-    Push,
-}
+use crate::{
+    log,
+    mmu::MMU,
+    ppu::{FetcherState, object::OamObject},
+};
 
 pub struct OamFifo {
     data: Vec<(u8, bool)>,
