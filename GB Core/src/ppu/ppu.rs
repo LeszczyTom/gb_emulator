@@ -1,15 +1,27 @@
-use crate::{log, mmu::MMU, ppu::fifo::FIFO};
+use crate::{
+    log,
+    mmu::MMU,
+    ppu::{bg_fifo::BGFifo, oam_fifo::OamFifo, object::OamObject},
+};
 
 pub struct PPU {
     dots: u32,
-    fifo: FIFO,
+    objects: Vec<OamObject>,
+    bg_fifo: BGFifo,
+    oam_fifo: OamFifo,
+    oam_scanned: bool,
+    x: u8,
 }
 
 impl Default for PPU {
     fn default() -> Self {
         Self {
             dots: 0,
-            fifo: FIFO::default(),
+            objects: vec![],
+            bg_fifo: BGFifo::default(),
+            oam_fifo: OamFifo::default(),
+            oam_scanned: false,
+            x: 0,
         }
     }
 }
@@ -19,6 +31,7 @@ impl PPU {
         if !mmu.lcd_enabled() {
             self.dots = 0;
             mmu.mem[0xFF44] = 0;
+            self.x = 0;
             return None;
         }
 
@@ -33,50 +46,113 @@ impl PPU {
         }
 
         let result = match mmu.ppu_mode() {
-            0 => {
-                if mmu.ly() == 144 {
-                    mmu.set_ppu_mode(1);
-                } else if self.dots % 456 == 0 {
-                    mmu.set_ppu_mode(2);
-                }
-
-                None
-            } // mode 0
-            1 => {
-                if mmu.ly() == 154 {
-                    mmu.set_ppu_mode(2);
-                    self.dots = 0;
-                    mmu.mem[0xFF44] = 0
-                }
-                None
-            } // mode 1
-            2 => {
-                if self.dots % 456 == 80 {
-                    mmu.set_ppu_mode(3);
-                }
-                None
-            } // mode 2
-            3 => {
-                let result = self.fifo.tick(mmu);
-                // log!("tick: {}", self.dots);
-
-                if self.fifo.line_done() {
-                    // log!("Reset");
-                    self.fifo.reset();
-                    mmu.set_ppu_mode(0);
-                }
-
-                result
-            } // mode 3
+            0 => self.mode_0(mmu),
+            1 => self.mode_1(mmu),
+            2 => self.mode_2(mmu),
+            3 => self.mode_3(mmu),
             _ => unreachable!(),
         };
 
         self.dots += 1;
 
         if self.dots % 456 == 0 {
-            mmu.mem[0xFF44] = mmu.mem[0xFF44].wrapping_add(1);
+            mmu.mem[0xFF44] = mmu.ly().wrapping_add(1);
+            self.x = 0;
         }
 
         return result;
+    }
+
+    fn mode_0(&mut self, mmu: &mut MMU) -> Option<u8> {
+        if mmu.ly() == 144 {
+            mmu.set_ppu_mode(1);
+        } else if self.dots % 456 == 0 {
+            mmu.set_ppu_mode(2);
+        }
+
+        None
+    }
+
+    fn mode_1(&mut self, mmu: &mut MMU) -> Option<u8> {
+        if mmu.ly() == 154 {
+            mmu.set_ppu_mode(2);
+            self.dots = 0;
+            mmu.mem[0xFF44] = 0
+        }
+
+        None
+    }
+
+    fn mode_2(&mut self, mmu: &mut MMU) -> Option<u8> {
+        if self.dots % 456 == 80 {
+            mmu.set_ppu_mode(3);
+            self.oam_scanned = false;
+        }
+
+        if !self.oam_scanned {
+            self.objects.clear();
+
+            mmu.mem[0xFE00..=0xFE9F].chunks(4).for_each(|obj: &[u8]| {
+                if obj[0] >= 16 {
+                    let obj_size = if mmu.obj_size() { 16 } else { 8 };
+                    let obj_y = obj[0] - 16;
+
+                    if mmu.ly() >= obj_y && mmu.ly() < obj_y + obj_size {
+                        // if self.objects.len() < 10 {
+                        self.objects.push(OamObject::new(obj));
+                        // }
+                    }
+                }
+            });
+
+            // if !self.objects.is_empty() {
+            //     log!("LY: {} => {:?}", mmu.ly(), self.objects);
+            // }
+
+            self.oam_scanned = true;
+        }
+
+        None
+    }
+
+    fn mode_3(&mut self, mmu: &mut MMU) -> Option<u8> {
+        let object_index = self.objects.iter().enumerate().find_map(|(index, object)| {
+            if object.x() >= 8 && object.x() - 8 == self.oam_fifo.fetcher_x * 8 {
+                return Some(index);
+            }
+
+            return None;
+        });
+
+        // log!("{:?}", self.oam_fifo.fetcher_x);
+        if let Some(index) = object_index {
+            self.oam_fifo.object = Some(self.objects.remove(index));
+            // log!("{:?}", self.oam_fifo.object);
+        }
+
+        self.oam_fifo.tick(mmu);
+        let bg_pixel = self.bg_fifo.tick(mmu, self.oam_fifo.fetching());
+
+        let output_pixel = if bg_pixel.is_some()
+            && let Some((pixel, prio)) = self.oam_fifo.get_pixel()
+            && prio
+        {
+            Some(pixel)
+        } else {
+            bg_pixel
+        };
+
+        if bg_pixel.is_some() {
+            self.x += 1;
+
+            if self.x == 160 {
+                self.x = 0;
+                self.bg_fifo.reset();
+                self.oam_fifo.reset();
+                mmu.set_ppu_mode(0);
+            }
+        }
+
+        output_pixel
     }
 }

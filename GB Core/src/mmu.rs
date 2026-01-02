@@ -75,7 +75,6 @@ impl MMU {
                 self.mem[0xFF44] = 0;
             }
             0xFF50 => {
-                log!("Bios unmapped: {}", value);
                 if value == 1 {
                     self.bios_mapped = false;
                 }
@@ -107,9 +106,11 @@ impl MMU {
     pub fn scy(&self) -> u8 {
         self.get(0xFF42)
     }
+
     pub fn wx(&self) -> u8 {
         self.get(0xFF4B)
     }
+
     pub fn wy(&self) -> u8 {
         self.get(0xFF4A)
     }
@@ -137,6 +138,7 @@ impl MMU {
     pub fn mode_0_int_select(&self) -> bool {
         return self.lcds() >> 3 & 1 == 1;
     }
+
     pub fn set_ppu_mode(&mut self, mode: u8) {
         if match mode {
             0b00 => self.mode_0_int_select(),
@@ -152,7 +154,6 @@ impl MMU {
         }
 
         self.mem[0xFF41] = (self.mem[0xFF41] & 0b1111_1100) | mode;
-        // log!("Mode: {} - {:08b}", self.mem[0xFF41], self.mem[0xFF41]);
     }
 
     pub fn ppu_mode(&self) -> u8 {
@@ -179,6 +180,18 @@ impl MMU {
         return self.mem[0xFF41];
     }
 
+    pub fn bg_enabled(&self) -> bool {
+        return self.lcdc() & 1 == 1;
+    }
+
+    pub fn obj_enable(&self) -> bool {
+        return (self.lcdc() >> 1) & 1 == 1;
+    }
+
+    pub fn obj_size(&self) -> bool {
+        return (self.lcdc() >> 2) & 1 == 1;
+    }
+
     pub fn bg_tile_map_area(&self) -> bool {
         return (self.lcdc() >> 3) & 1 == 1;
     }
@@ -197,6 +210,22 @@ impl MMU {
 
     pub fn lcd_enabled(&self) -> bool {
         return (self.lcdc() >> 7) & 1 == 1;
+    }
+
+    pub fn convert_obj_color(&self, pixel: u8, obp1: bool) -> u8 {
+        let colors = if obp1 {
+            self.mem[0xFF48]
+        } else {
+            self.mem[0xFF49]
+        };
+
+        match pixel {
+            0 => colors & 0b11,
+            1 => (colors >> 2) & 0b11,
+            2 => (colors >> 4) & 0b11,
+            3 => (colors >> 6) & 0b11,
+            _ => unreachable!(),
+        }
     }
 
     pub fn load_file(

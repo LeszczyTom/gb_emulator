@@ -368,7 +368,6 @@ impl Core {
                 continue;
             }
 
-            self.cpu.ime = false;
             self.cpu.halted = false;
 
             self.mem_set(interrupt_flag & !(1 << flag), 0xFF0F);

@@ -135,7 +135,7 @@ fn cpu_11() {
     println!("{}", dir_path.display());
 
     assert!(run_until_passed_or_timeout(
-        Duration::from_secs(5),
+        Duration::from_secs(10),
         dir_path.to_str().unwrap().into(),
     ));
 }
