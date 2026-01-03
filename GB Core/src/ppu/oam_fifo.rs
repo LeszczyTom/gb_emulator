@@ -1,103 +1,65 @@
+use std::collections::VecDeque;
+
 use crate::{
     log,
     mmu::MMU,
-    ppu::{FetcherState, Palette, object::OamObject, pixel::Pixel},
+    ppu::{Palette, object::OamObject, pixel::Pixel},
 };
 
 pub struct OamFifo {
-    data: Vec<Pixel>,
+    dots: u8,
+    data: VecDeque<Pixel>,
     pub object: Option<OamObject>,
-    fetcher_object: Option<OamObject>,
     data_low: u8,
     data_high: u8,
-    fetcher_state: FetcherState,
-    fetcher_state_ended: bool,
 }
 
 impl Default for OamFifo {
     fn default() -> Self {
         Self {
-            data: vec![],
+            data: VecDeque::new(),
             object: None,
-            fetcher_object: None,
             data_low: 0,
             data_high: 0,
-            fetcher_state: FetcherState::GetTile,
-            fetcher_state_ended: false,
+            dots: 0,
         }
     }
 }
 
 impl OamFifo {
     pub fn tick(&mut self, mmu: &MMU) {
-        self.tick_fetcher(mmu);
+        if self.object.is_some() {
+            self.tick_fetcher(mmu);
+            self.dots += 1;
+        } else {
+            self.dots = 0;
+        }
     }
 
     pub fn get_pixel(&mut self) -> Option<Pixel> {
-        self.data.pop()
+        self.data.pop_front()
     }
 
     pub fn reset(&mut self) {
         self.data.clear();
         self.object = None;
-        self.fetcher_object = None;
-        self.fetcher_state = FetcherState::GetTile;
-        self.fetcher_state_ended = false;
     }
 
     pub fn fetching(&self) -> bool {
-        return self.object.is_some()
-            && self.fetcher_state_ended
-            && (self.fetcher_state == FetcherState::GetTile
-                || self.fetcher_state == FetcherState::GetTileDataLow
-                || self.fetcher_state == FetcherState::GetTileDataHigh);
+        return self.dots != 0;
     }
 
     fn tick_fetcher(&mut self, mmu: &MMU) {
-        match self.fetcher_state {
-            FetcherState::GetTile => {
-                if self.fetcher_state_ended {
-                    self.fetcher_state = FetcherState::GetTileDataLow;
-                    self.fetcher_state_ended = false;
-                } else {
-                    self.fetcher_object = self.object;
-                    self.object = None;
-                    self.fetcher_state_ended = true;
-                }
-            }
-            FetcherState::GetTileDataLow => {
-                if self.fetcher_state_ended {
-                    self.fetcher_state = FetcherState::GetTileDataHigh;
-                    self.fetcher_state_ended = false;
-                } else {
-                    self.fetcher_get_tile_data_low(mmu);
-                    self.fetcher_state_ended = true;
-                }
-            }
-            FetcherState::GetTileDataHigh => {
-                if self.fetcher_state_ended {
-                    self.fetcher_state = FetcherState::Sleep;
-                    self.fetcher_state_ended = false;
-                    return;
-                } else {
-                    self.fetcher_get_tile_data_high(mmu);
-                    self.fetcher_state_ended = true;
-                }
-            }
-            FetcherState::Sleep => {
-                if self.fetcher_state_ended {
-                    self.fetcher_state = FetcherState::Push;
-                    self.fetcher_state_ended = false;
-                } else {
-                    self.fetcher_state_ended = true;
-                }
-            }
-            FetcherState::Push => self.fetcher_push(mmu),
+        match self.dots {
+            1 => self.get_tile_data_low(mmu),
+            3 => self.get_tile_data_high(mmu),
+            5 => self.push(mmu),
+            _ => (),
         }
     }
 
-    fn fetcher_get_tile_data_low(&mut self, mmu: &MMU) {
-        if let Some(object) = self.fetcher_object {
+    fn get_tile_data_low(&mut self, mmu: &MMU) {
+        if let Some(object) = self.object {
             let offset = 0x8000 + object.tile_index() as u16 * 16;
             let y = if object.flip_y() {
                 7 - mmu.ly() as u16 % 8
@@ -109,8 +71,8 @@ impl OamFifo {
         }
     }
 
-    fn fetcher_get_tile_data_high(&mut self, mmu: &MMU) {
-        if let Some(object) = self.fetcher_object {
+    fn get_tile_data_high(&mut self, mmu: &MMU) {
+        if let Some(object) = self.object {
             let offset = 0x8000 + object.tile_index() as u16 * 16;
             let y = if object.flip_y() {
                 7 - mmu.ly() as u16 % 8
@@ -122,35 +84,27 @@ impl OamFifo {
         }
     }
 
-    fn fetcher_push(&mut self, mmu: &MMU) {
-        if self.data.is_empty() {
-            if mmu.obj_enable()
-                && let Some(obj) = self.fetcher_object
-            {
-                for i in 0..8 {
-                    let shift = if obj.flip_x() { 7 - i } else { i };
-                    let high = (self.data_high >> shift) & 1;
-                    let low = (self.data_low >> shift) & 1;
-                    let data = (high << 1) | low;
-                    let priority = !obj.priority();
-                    let palette = if obj.palette() {
-                        Palette::OBP1
-                    } else {
-                        Palette::OBP0
-                    };
+    fn push(&mut self, mmu: &MMU) {
+        if mmu.obj_enable()
+            && let Some(obj) = self.object
+        {
+            for i in 0..8 {
+                let shift = if obj.flip_x() { i } else { 7 - i };
+                let high = (self.data_high >> shift) & 1;
+                let low = (self.data_low >> shift) & 1;
+                let data = (high << 1) | low;
+                let priority = !obj.priority();
+                let palette = if obj.palette() {
+                    Palette::OBP1
+                } else {
+                    Palette::OBP0
+                };
 
-                    self.data.push(Pixel::new(data, priority, palette));
-                }
-
-                self.fetcher_object = None;
-            } else {
-                for _ in 0..8 {
-                    self.data.push(Pixel::new(0, false, Palette::OBP0));
-                }
+                self.data.push_back(Pixel::new(data, priority, palette));
             }
-
-            self.fetcher_state = FetcherState::GetTile;
-            self.fetcher_state_ended = false;
         }
+
+        self.object = None;
+        self.dots = 0;
     }
 }

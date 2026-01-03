@@ -88,6 +88,8 @@ impl PPU {
         if self.dots % 456 == 80 {
             mmu.set_ppu_mode(3);
             self.oam_scanned = false;
+            self.bg_fifo.reset();
+            self.oam_fifo.reset();
         }
 
         if !self.oam_scanned {
@@ -112,7 +114,7 @@ impl PPU {
 
     fn mode_3(&mut self, mmu: &mut MMU) -> Option<u8> {
         let object_index = self.objects.iter().enumerate().find_map(|(index, object)| {
-            if object.x() >= 16 && object.x() - 16 == self.x {
+            if object.x() >= 8 && object.x() - 8 == self.x {
                 return Some(index);
             }
 
@@ -120,47 +122,50 @@ impl PPU {
         });
 
         if let Some(index) = object_index {
-            self.oam_fifo.object = Some(self.objects.remove(index));
+            if self.oam_fifo.object.is_none() {
+                self.oam_fifo.object = Some(self.objects.remove(index));
+            } else {
+                self.objects.remove(index);
+            }
         }
 
-        let in_window = self.in_window(mmu);
-        let obj_fetching = self.oam_fifo.fetching();
-
         self.oam_fifo.tick(mmu);
-        let bg_pixel = self.bg_fifo.tick(mmu, obj_fetching, in_window);
 
-        let output_pixel = if bg_pixel.is_some()
-            && let Some(pixel) = self.oam_fifo.get_pixel()
-            && pixel.priority
-            && pixel.data != 0
-        {
-            let colors = match pixel.palette {
-                Palette::OBP0 => mmu.obp0(),
-                Palette::OBP1 => mmu.obp1(),
-            };
+        if self.oam_fifo.fetching() {
+            return None;
+        }
 
-            Some(match pixel.data {
-                1 => (colors >> 2) & 0b11,
-                2 => (colors >> 4) & 0b11,
-                3 => (colors >> 6) & 0b11,
-                _ => unreachable!(),
-            })
-        } else {
-            bg_pixel
-        };
+        self.bg_fifo.tick(mmu, self.in_window(mmu));
 
-        if bg_pixel.is_some() {
+        if let Some(bg_pixel) = self.bg_fifo.get_pixel() {
             self.x += 1;
 
             if self.x == 160 {
                 self.x = 0;
-                self.bg_fifo.reset();
-                self.oam_fifo.reset();
                 mmu.set_ppu_mode(0);
             }
+
+            if let Some(pixel) = self.oam_fifo.get_pixel()
+                && pixel.priority
+                && pixel.data != 0
+            {
+                let colors = match pixel.palette {
+                    Palette::OBP0 => mmu.obp0(),
+                    Palette::OBP1 => mmu.obp1(),
+                };
+
+                return Some(match pixel.data {
+                    1 => (colors >> 2) & 0b11,
+                    2 => (colors >> 4) & 0b11,
+                    3 => (colors >> 6) & 0b11,
+                    _ => unreachable!(),
+                });
+            };
+
+            return Some(bg_pixel);
         }
 
-        output_pixel
+        return None;
     }
 
     fn in_window(&self, mmu: &MMU) -> bool {

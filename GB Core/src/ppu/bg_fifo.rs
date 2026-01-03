@@ -34,7 +34,7 @@ impl Default for BGFifo {
 }
 
 impl BGFifo {
-    pub fn tick(&mut self, mmu: &MMU, fetch_paused: bool, in_window: bool) -> Option<u8> {
+    pub fn tick(&mut self, mmu: &MMU, in_window: bool) {
         if in_window {
             if !self.in_window {
                 self.window_x = 0;
@@ -46,8 +46,11 @@ impl BGFifo {
             self.in_window = in_window;
         }
 
-        self.tick_fetcher(mmu, fetch_paused);
-        return self.data.pop();
+        self.tick_fetcher(mmu);
+    }
+
+    pub fn get_pixel(&mut self) -> Option<u8> {
+        self.data.pop()
     }
 
     pub fn reset(&mut self) {
@@ -58,13 +61,9 @@ impl BGFifo {
         self.fetcher_state_ended = false;
     }
 
-    fn tick_fetcher(&mut self, mmu: &MMU, fetch_paused: bool) {
+    fn tick_fetcher(&mut self, mmu: &MMU) {
         match self.fetcher_state {
             FetcherState::GetTile => {
-                if fetch_paused {
-                    return;
-                }
-
                 if self.fetcher_state_ended {
                     self.fetcher_state = FetcherState::GetTileDataLow;
                     self.fetcher_state_ended = false;
@@ -74,10 +73,6 @@ impl BGFifo {
                 }
             }
             FetcherState::GetTileDataLow => {
-                if fetch_paused {
-                    return;
-                }
-
                 if self.fetcher_state_ended {
                     self.fetcher_state = FetcherState::GetTileDataHigh;
                     self.fetcher_state_ended = false;
@@ -87,10 +82,6 @@ impl BGFifo {
                 }
             }
             FetcherState::GetTileDataHigh => {
-                if fetch_paused {
-                    return;
-                }
-
                 if self.fetcher_state_ended {
                     self.fetcher_state = FetcherState::Sleep;
                     self.fetcher_state_ended = false;

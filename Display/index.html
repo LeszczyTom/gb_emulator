@@ -34,8 +34,8 @@
     console.log("gb_bios.bin loaded");
   }
 
-  // let rom_path = "Dr. Mario.gb";
-  // let rom_path = "Tetris.gb";
+  // let rom_path = "roms/Dr. Mario.gb";
+  // let rom_path = "roms/Tetris.gb";
   let rom_path = "roms/dmg-acid2.gb";
   const rom = await loadROM(rom_path);
   if (game.read_rom(rom, rom.length)) {
