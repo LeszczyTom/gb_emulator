@@ -7,8 +7,7 @@ use crate::{
 pub struct OamFifo {
     data: Vec<(u8, bool)>,
     pub object: Option<OamObject>,
-    tile_index: Option<u8>,
-    pub fetcher_x: u8,
+    fetcher_object: Option<OamObject>,
     data_low: u8,
     data_high: u8,
     fetcher_state: FetcherState,
@@ -20,8 +19,7 @@ impl Default for OamFifo {
         Self {
             data: vec![],
             object: None,
-            tile_index: None,
-            fetcher_x: 0,
+            fetcher_object: None,
             data_low: 0,
             data_high: 0,
             fetcher_state: FetcherState::GetTile,
@@ -41,8 +39,8 @@ impl OamFifo {
 
     pub fn reset(&mut self) {
         self.data.clear();
-        self.fetcher_x = 0;
         self.object = None;
+        self.fetcher_object = None;
         self.fetcher_state = FetcherState::GetTile;
         self.fetcher_state_ended = false;
     }
@@ -62,18 +60,8 @@ impl OamFifo {
                     self.fetcher_state = FetcherState::GetTileDataLow;
                     self.fetcher_state_ended = false;
                 } else {
-                    self.tile_index = if let Some(obj) = self.object {
-                        let index = if obj.big {
-                            obj.tile_index() & 0xFE
-                        } else {
-                            obj.tile_index()
-                        };
-
-                        Some(index)
-                    } else {
-                        None
-                    };
-
+                    self.fetcher_object = self.object;
+                    self.object = None;
                     self.fetcher_state_ended = true;
                 }
             }
@@ -109,9 +97,9 @@ impl OamFifo {
     }
 
     fn fetcher_get_tile_data_low(&mut self, mmu: &MMU) {
-        if let Some(index) = self.tile_index {
-            let offset = 0x8000 + index as u16 * 16;
-            let y = if self.object.unwrap().flip_y() {
+        if let Some(object) = self.fetcher_object {
+            let offset = 0x8000 + object.tile_index() as u16 * 16;
+            let y = if object.flip_y() {
                 7 - mmu.ly() as u16 % 8
             } else {
                 mmu.ly() as u16 % 8
@@ -122,9 +110,9 @@ impl OamFifo {
     }
 
     fn fetcher_get_tile_data_high(&mut self, mmu: &MMU) {
-        if let Some(index) = self.tile_index {
-            let offset = 0x8000 + index as u16 * 16;
-            let y = if self.object.unwrap().flip_y() {
+        if let Some(object) = self.fetcher_object {
+            let offset = 0x8000 + object.tile_index() as u16 * 16;
+            let y = if object.flip_y() {
                 7 - mmu.ly() as u16 % 8
             } else {
                 mmu.ly() as u16 % 8
@@ -136,31 +124,24 @@ impl OamFifo {
 
     fn fetcher_push(&mut self, mmu: &MMU) {
         if self.data.is_empty() {
-            let priority = if let Some(obj) = self.object {
-                !obj.priority()
-            } else {
-                false
-            };
-
             if mmu.obj_enable()
-                && let Some(obj) = self.object
+                && let Some(obj) = self.fetcher_object
             {
                 for i in 0..8 {
-                    let shift = if obj.flip_x() { 7 - i } else { i };
+                    let shift = if obj.flip_x() { 8 - i } else { i };
                     let high = (self.data_high >> shift) & 1;
                     let low = (self.data_low >> shift) & 1;
                     let data = mmu.convert_obj_color((high << 1) | low, obj.palette());
-                    self.data.push((data, true));
+                    self.data.push((data, !obj.priority()));
                 }
 
-                self.object = None;
+                self.fetcher_object = None;
             } else {
                 for _ in 0..8 {
                     self.data.push((0, false));
                 }
             }
 
-            self.fetcher_x += 1;
             self.fetcher_state = FetcherState::GetTile;
             self.fetcher_state_ended = false;
         }

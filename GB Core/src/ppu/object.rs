@@ -23,7 +23,11 @@ impl OamObject {
     }
 
     pub fn tile_index(&self) -> u8 {
-        return self.data[2];
+        if self.big {
+            self.data[2] & 0xFE
+        } else {
+            self.data[2]
+        }
     }
 
     pub fn flag(&self) -> u8 {

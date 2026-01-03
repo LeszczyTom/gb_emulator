@@ -112,7 +112,7 @@ impl PPU {
 
     fn mode_3(&mut self, mmu: &mut MMU) -> Option<u8> {
         let object_index = self.objects.iter().enumerate().find_map(|(index, object)| {
-            if object.x() >= 8 && object.x() - 8 == self.oam_fifo.fetcher_x * 8 {
+            if object.x() >= 16 && object.x() - 16 == self.x {
                 return Some(index);
             }
 
@@ -131,8 +131,8 @@ impl PPU {
 
         let output_pixel = if bg_pixel.is_some()
             && let Some((pixel, prio)) = self.oam_fifo.get_pixel()
-        // && prio
-        // && pixel != 0
+            && prio
+            && pixel != 0
         {
             Some(pixel)
         } else {
