@@ -220,7 +220,7 @@ impl MMU {
         };
 
         match pixel {
-            0 => colors & 0b11,
+            0 => 0,
             1 => (colors >> 2) & 0b11,
             2 => (colors >> 4) & 0b11,
             3 => (colors >> 6) & 0b11,

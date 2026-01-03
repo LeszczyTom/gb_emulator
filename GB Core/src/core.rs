@@ -17,10 +17,10 @@ const WIDTH: usize = 160;
 const HEIGHT: usize = 144;
 const BUFFER_SIZE: usize = WIDTH * HEIGHT * 4;
 
-const COLOR_1: [u8; 4] = [0xe0, 0xf0, 0xe7, 0xff];
-const COLOR_2: [u8; 4] = [0x8b, 0xa3, 0x94, 0xff];
-const COLOR_3: [u8; 4] = [0x55, 0x64, 0x5a, 0xff];
-const COLOR_4: [u8; 4] = [0x34, 0x3d, 0x37, 0xff];
+const COLOR_1: [u8; 4] = [0x00, 0x00, 0x00, 0xff];
+const COLOR_2: [u8; 4] = [0x55, 0x55, 0x55, 0xff];
+const COLOR_3: [u8; 4] = [0xAA, 0xAA, 0xAA, 0xff];
+const COLOR_4: [u8; 4] = [0xFF, 0xFF, 0xFF, 0xff];
 
 pub struct Core {
     pub cpu: CPU,
@@ -108,10 +108,10 @@ impl Core {
         for _ in 0..4 {
             if let Some(data) = self.ppu.cycle(&mut self.mmu) {
                 let pixels = match data {
-                    0 => COLOR_1,
-                    1 => COLOR_2,
-                    2 => COLOR_3,
-                    3 => COLOR_4,
+                    0 => COLOR_4,
+                    1 => COLOR_3,
+                    2 => COLOR_2,
+                    3 => COLOR_1,
                     _ => unreachable!("pixel: {}", data),
                 };
 

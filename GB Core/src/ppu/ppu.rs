@@ -98,17 +98,11 @@ impl PPU {
                     let obj_size = if mmu.obj_size() { 16 } else { 8 };
                     let obj_y = obj[0] - 16;
 
-                    if mmu.ly() >= obj_y && mmu.ly() < obj_y + obj_size {
-                        // if self.objects.len() < 10 {
-                        self.objects.push(OamObject::new(obj));
-                        // }
+                    if mmu.ly() >= obj_y && mmu.ly() < obj_y + obj_size && self.objects.len() < 10 {
+                        self.objects.push(OamObject::new(obj, obj_size == 16));
                     }
                 }
             });
-
-            // if !self.objects.is_empty() {
-            //     log!("LY: {} => {:?}", mmu.ly(), self.objects);
-            // }
 
             self.oam_scanned = true;
         }
@@ -137,7 +131,8 @@ impl PPU {
 
         let output_pixel = if bg_pixel.is_some()
             && let Some((pixel, prio)) = self.oam_fifo.get_pixel()
-            && prio
+        // && prio
+        // && pixel != 0
         {
             Some(pixel)
         } else {

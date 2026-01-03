@@ -1,14 +1,16 @@
 #[derive(Clone, Copy, Debug)]
 pub struct OamObject {
     pub data: [u8; 4],
+    pub big: bool,
 }
 
 impl OamObject {
-    pub fn new(obj: &[u8]) -> Self {
+    pub fn new(obj: &[u8], big: bool) -> Self {
         assert_eq!(obj.len(), 4);
 
         Self {
             data: [obj[0], obj[1], obj[2], obj[3]],
+            big: big,
         }
     }
 
@@ -30,6 +32,14 @@ impl OamObject {
 
     pub fn priority(&self) -> bool {
         return (self.flag() >> 7) & 1 == 1;
+    }
+
+    pub fn flip_x(&self) -> bool {
+        return (self.flag() >> 5) & 1 == 1;
+    }
+
+    pub fn flip_y(&self) -> bool {
+        return (self.flag() >> 6) & 1 == 1;
     }
 
     pub fn palette(&self) -> bool {

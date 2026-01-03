@@ -63,7 +63,13 @@ impl OamFifo {
                     self.fetcher_state_ended = false;
                 } else {
                     self.tile_index = if let Some(obj) = self.object {
-                        Some(obj.tile_index())
+                        let index = if obj.big {
+                            obj.tile_index() & 0xFE
+                        } else {
+                            obj.tile_index()
+                        };
+
+                        Some(index)
                     } else {
                         None
                     };
@@ -105,7 +111,12 @@ impl OamFifo {
     fn fetcher_get_tile_data_low(&mut self, mmu: &MMU) {
         if let Some(index) = self.tile_index {
             let offset = 0x8000 + index as u16 * 16;
-            let address = offset + (mmu.ly() as u16 % 8) * 2;
+            let y = if self.object.unwrap().flip_y() {
+                7 - mmu.ly() as u16 % 8
+            } else {
+                mmu.ly() as u16 % 8
+            };
+            let address = offset + y * 2;
             self.data_low = mmu.mem[address as usize];
         }
     }
@@ -113,7 +124,12 @@ impl OamFifo {
     fn fetcher_get_tile_data_high(&mut self, mmu: &MMU) {
         if let Some(index) = self.tile_index {
             let offset = 0x8000 + index as u16 * 16;
-            let address = offset + (mmu.ly() as u16 % 8) * 2;
+            let y = if self.object.unwrap().flip_y() {
+                7 - mmu.ly() as u16 % 8
+            } else {
+                mmu.ly() as u16 % 8
+            };
+            let address = offset + y * 2;
             self.data_low = mmu.mem[address as usize + 1];
         }
     }
@@ -130,17 +146,17 @@ impl OamFifo {
                 && let Some(obj) = self.object
             {
                 for i in 0..8 {
-                    let high = (self.data_high >> i) & 1;
-                    let low = (self.data_low >> i) & 1;
+                    let shift = if obj.flip_x() { 7 - i } else { i };
+                    let high = (self.data_high >> shift) & 1;
+                    let low = (self.data_low >> shift) & 1;
                     let data = mmu.convert_obj_color((high << 1) | low, obj.palette());
-                    // self.data.push((data, priority));
                     self.data.push((data, true));
                 }
 
                 self.object = None;
             } else {
                 for _ in 0..8 {
-                    self.data.push((3, false));
+                    self.data.push((0, false));
                 }
             }
 
