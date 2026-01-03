@@ -1,11 +1,11 @@
 use crate::{
     log,
     mmu::MMU,
-    ppu::{FetcherState, object::OamObject},
+    ppu::{FetcherState, Palette, object::OamObject, pixel::Pixel},
 };
 
 pub struct OamFifo {
-    data: Vec<(u8, bool)>,
+    data: Vec<Pixel>,
     pub object: Option<OamObject>,
     fetcher_object: Option<OamObject>,
     data_low: u8,
@@ -33,7 +33,7 @@ impl OamFifo {
         self.tick_fetcher(mmu);
     }
 
-    pub fn get_pixel(&mut self) -> Option<(u8, bool)> {
+    pub fn get_pixel(&mut self) -> Option<Pixel> {
         self.data.pop()
     }
 
@@ -118,7 +118,7 @@ impl OamFifo {
                 mmu.ly() as u16 % 8
             };
             let address = offset + y * 2;
-            self.data_low = mmu.mem[address as usize + 1];
+            self.data_high = mmu.mem[address as usize + 1];
         }
     }
 
@@ -128,17 +128,24 @@ impl OamFifo {
                 && let Some(obj) = self.fetcher_object
             {
                 for i in 0..8 {
-                    let shift = if obj.flip_x() { 8 - i } else { i };
+                    let shift = if obj.flip_x() { 7 - i } else { i };
                     let high = (self.data_high >> shift) & 1;
                     let low = (self.data_low >> shift) & 1;
-                    let data = mmu.convert_obj_color((high << 1) | low, obj.palette());
-                    self.data.push((data, !obj.priority()));
+                    let data = (high << 1) | low;
+                    let priority = !obj.priority();
+                    let palette = if obj.palette() {
+                        Palette::OBP1
+                    } else {
+                        Palette::OBP0
+                    };
+
+                    self.data.push(Pixel::new(data, priority, palette));
                 }
 
                 self.fetcher_object = None;
             } else {
                 for _ in 0..8 {
-                    self.data.push((0, false));
+                    self.data.push(Pixel::new(0, false, Palette::OBP0));
                 }
             }
 

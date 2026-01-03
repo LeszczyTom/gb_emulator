@@ -180,6 +180,14 @@ impl MMU {
         return self.mem[0xFF41];
     }
 
+    pub fn obp0(&self) -> u8 {
+        return self.mem[0xFF48];
+    }
+
+    pub fn obp1(&self) -> u8 {
+        return self.mem[0xFF49];
+    }
+
     pub fn bg_enabled(&self) -> bool {
         return self.lcdc() & 1 == 1;
     }

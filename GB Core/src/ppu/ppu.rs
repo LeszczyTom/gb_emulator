@@ -1,7 +1,7 @@
 use crate::{
     log,
     mmu::MMU,
-    ppu::{bg_fifo::BGFifo, oam_fifo::OamFifo, object::OamObject},
+    ppu::{Palette, bg_fifo::BGFifo, oam_fifo::OamFifo, object::OamObject},
 };
 
 pub struct PPU {
@@ -130,11 +130,21 @@ impl PPU {
         let bg_pixel = self.bg_fifo.tick(mmu, obj_fetching, in_window);
 
         let output_pixel = if bg_pixel.is_some()
-            && let Some((pixel, prio)) = self.oam_fifo.get_pixel()
-            && prio
-            && pixel != 0
+            && let Some(pixel) = self.oam_fifo.get_pixel()
+            && pixel.priority
+            && pixel.data != 0
         {
-            Some(pixel)
+            let colors = match pixel.palette {
+                Palette::OBP0 => mmu.obp0(),
+                Palette::OBP1 => mmu.obp1(),
+            };
+
+            Some(match pixel.data {
+                1 => (colors >> 2) & 0b11,
+                2 => (colors >> 4) & 0b11,
+                3 => (colors >> 6) & 0b11,
+                _ => unreachable!(),
+            })
         } else {
             bg_pixel
         };
