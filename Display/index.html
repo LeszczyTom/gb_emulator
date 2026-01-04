@@ -48,7 +48,7 @@
   const image = ctx.createImageData(WIDTH, HEIGHT);
   let index = 0;
 
-  const frame_rate = 120;
+  const frame_rate = 60;
   const fps = (1 / frame_rate) * 1000;
   const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
   const renderLoop = async () => {

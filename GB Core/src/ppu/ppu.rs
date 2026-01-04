@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use crate::{
     log,
     mmu::MMU,
@@ -6,10 +8,12 @@ use crate::{
 
 pub struct PPU {
     dots: u32,
-    objects: Vec<OamObject>,
+    objects: HashMap<u8, OamObject>,
     bg_fifo: BGFifo,
     oam_fifo: OamFifo,
     oam_scanned: bool,
+    object_drawn: u8,
+    last_drawn_x: u8,
     x: u8,
 }
 
@@ -17,10 +21,12 @@ impl Default for PPU {
     fn default() -> Self {
         Self {
             dots: 0,
-            objects: vec![],
+            objects: HashMap::new(),
             bg_fifo: BGFifo::default(),
             oam_fifo: OamFifo::default(),
             oam_scanned: false,
+            object_drawn: 0,
+            last_drawn_x: 0,
             x: 0,
         }
     }
@@ -88,6 +94,8 @@ impl PPU {
         if self.dots % 456 == 80 {
             mmu.set_ppu_mode(3);
             self.oam_scanned = false;
+            self.object_drawn = 0;
+            self.last_drawn_x = 0;
             self.bg_fifo.reset();
             self.oam_fifo.reset();
         }
@@ -100,8 +108,16 @@ impl PPU {
                     let obj_size = if mmu.obj_size() { 16 } else { 8 };
                     let obj_y = obj[0] - 16;
 
-                    if mmu.ly() >= obj_y && mmu.ly() < obj_y + obj_size && self.objects.len() < 10 {
-                        self.objects.push(OamObject::new(obj, obj_size == 16));
+                    if mmu.ly() >= obj_y
+                        && mmu.ly() < obj_y + obj_size
+                        // && self.objects.len() < 10
+                        && obj[1] >= 8
+                    {
+                        let x = obj[1] - 8;
+
+                        if !self.objects.contains_key(&x) {
+                            self.objects.insert(x, OamObject::new(obj, obj_size == 16));
+                        }
                     }
                 }
             });
@@ -113,19 +129,13 @@ impl PPU {
     }
 
     fn mode_3(&mut self, mmu: &mut MMU) -> Option<u8> {
-        let object_index = self.objects.iter().enumerate().find_map(|(index, object)| {
-            if object.x() >= 8 && object.x() - 8 == self.x {
-                return Some(index);
-            }
-
-            return None;
-        });
-
-        if let Some(index) = object_index {
-            if self.oam_fifo.object.is_none() {
-                self.oam_fifo.object = Some(self.objects.remove(index));
-            } else {
-                self.objects.remove(index);
+        if self.object_drawn < 10 && self.objects.contains_key(&self.x) {
+            if let Some(object) = self.objects.remove(&self.x)
+                && object.x() - self.last_drawn_x >= 8
+            {
+                self.oam_fifo.object = Some(object);
+                self.object_drawn += 1;
+                self.last_drawn_x = self.oam_fifo.object.unwrap().x();
             }
         }
 
