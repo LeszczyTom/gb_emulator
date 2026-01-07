@@ -108,11 +108,7 @@ impl PPU {
                     let obj_size = if mmu.obj_size() { 16 } else { 8 };
                     let obj_y = obj[0] - 16;
 
-                    if mmu.ly() >= obj_y
-                        && mmu.ly() < obj_y + obj_size
-                        // && self.objects.len() < 10
-                        && obj[1] >= 8
-                    {
+                    if mmu.ly() >= obj_y && mmu.ly() < obj_y + obj_size && obj[1] >= 8 {
                         let x = obj[1] - 8;
 
                         if !self.objects.contains_key(&x) {
@@ -130,9 +126,7 @@ impl PPU {
 
     fn mode_3(&mut self, mmu: &mut MMU) -> Option<u8> {
         if self.object_drawn < 10 && self.objects.contains_key(&self.x) {
-            if let Some(object) = self.objects.remove(&self.x)
-                && object.x() - self.last_drawn_x >= 8
-            {
+            if let Some(object) = self.objects.remove(&self.x) {
                 self.oam_fifo.object = Some(object);
                 self.object_drawn += 1;
                 self.last_drawn_x = self.oam_fifo.object.unwrap().x();
@@ -156,7 +150,7 @@ impl PPU {
             }
 
             if let Some(pixel) = self.oam_fifo.get_pixel()
-                && pixel.priority
+                && (pixel.priority || bg_pixel == 0)
                 && pixel.data != 0
             {
                 let colors = match pixel.palette {

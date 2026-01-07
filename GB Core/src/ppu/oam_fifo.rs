@@ -89,18 +89,20 @@ impl OamFifo {
             && let Some(obj) = self.object
         {
             for i in 0..8 {
-                let shift = if obj.flip_x() { i } else { 7 - i };
-                let high = (self.data_high >> shift) & 1;
-                let low = (self.data_low >> shift) & 1;
-                let data = (high << 1) | low;
-                let priority = !obj.priority();
-                let palette = if obj.palette() {
-                    Palette::OBP1
-                } else {
-                    Palette::OBP0
-                };
+                if self.data.get(i).is_none() {
+                    let shift = if obj.flip_x() { i } else { 7 - i };
+                    let high = (self.data_high >> shift) & 1;
+                    let low = (self.data_low >> shift) & 1;
+                    let data = (high << 1) | low;
+                    let priority = !obj.priority();
+                    let palette = if obj.palette() {
+                        Palette::OBP1
+                    } else {
+                        Palette::OBP0
+                    };
 
-                self.data.push_back(Pixel::new(data, priority, palette));
+                    self.data.push_back(Pixel::new(data, priority, palette));
+                }
             }
         }
 
