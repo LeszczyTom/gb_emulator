@@ -58,29 +58,26 @@ impl OamFifo {
         }
     }
 
+    fn get_tile_address(&self, object: OamObject, mmu: &MMU) -> usize {
+        let tile = object.tile_index() as usize;
+        let mut row = (mmu.ly() - (object.y() - 16)) as usize;
+
+        if object.flip_y() {
+            row = if object.big { 15 } else { 7 } - row;
+        }
+
+        return 0x8000 + tile * 16 + row * 2;
+    }
+
     fn get_tile_data_low(&mut self, mmu: &MMU) {
         if let Some(object) = self.object {
-            let offset = 0x8000 + object.tile_index() as u16 * 16;
-            let y = if object.flip_y() {
-                7 - mmu.ly() as u16 % 8
-            } else {
-                mmu.ly() as u16 % 8
-            };
-            let address = offset + y * 2;
-            self.data_low = mmu.mem[address as usize];
+            self.data_low = mmu.mem[self.get_tile_address(object, mmu)];
         }
     }
 
     fn get_tile_data_high(&mut self, mmu: &MMU) {
         if let Some(object) = self.object {
-            let offset = 0x8000 + object.tile_index() as u16 * 16;
-            let y = if object.flip_y() {
-                7 - mmu.ly() as u16 % 8
-            } else {
-                mmu.ly() as u16 % 8
-            };
-            let address = offset + y * 2;
-            self.data_high = mmu.mem[address as usize + 1];
+            self.data_high = mmu.mem[self.get_tile_address(object, mmu) + 1];
         }
     }
 
