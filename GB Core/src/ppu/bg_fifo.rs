@@ -5,14 +5,13 @@ pub struct BGFifo {
 
     data_low: u8,
     data_high: u8,
-    tile_y: u8,
     tile_index: u8,
     fetcher_state: FetcherState,
     fetcher_state_ended: bool,
     fetcher_x: u8,
     in_window: bool,
-    window_x: u8,
-    pub window_y: u8,
+    window_x: usize,
+    pub window_y: usize,
 }
 
 impl Default for BGFifo {
@@ -21,7 +20,6 @@ impl Default for BGFifo {
             data: vec![],
             data_low: 0,
             data_high: 0,
-            tile_y: 0,
             tile_index: 0,
             fetcher_state: FetcherState::GetTile,
             fetcher_state_ended: false,
@@ -103,53 +101,44 @@ impl BGFifo {
         }
     }
 
+    fn get_tile_index(&self, tile_x: usize, tile_y: usize, tilemap: bool, mmu: &MMU) -> u8 {
+        let tilemap = (tilemap as usize) << 10;
+        let y = (tile_y & 0x1F) << 5;
+        let x = tile_x & 0x1F;
+        let adress = 0x9800 | tilemap | y | x;
+
+        return mmu.mem[adress];
+    }
+
     fn fetcher_get_tile(&mut self, mmu: &MMU) {
         if self.in_window {
-            let tile_map = if mmu.window_tile_map() {
-                0x9C00
-            } else {
-                0x9800
-            };
-            self.tile_y = self.window_y - 1;
-            let x = self.window_x as u16;
-            let y = self.tile_y as u16 / 8;
-            let address = tile_map + y * 32 + x;
-
-            self.tile_index = mmu.mem[address as usize];
+            let tile_y = (self.window_y - 1) / 8;
+            let tile_x = self.window_x;
+            self.tile_index = self.get_tile_index(tile_x, tile_y, mmu.window_tile_map(), mmu);
         } else {
-            let tile_map = if mmu.bg_tile_map_area() {
-                0x9C00
-            } else {
-                0x9800
-            };
-            self.tile_y = ((mmu.ly() as u16 + mmu.scy() as u16) & 0xFF) as u8;
-            let x = self.fetcher_x as u16;
-            let y = self.tile_y as u16 / 8;
-            let address = tile_map + y * 32 + x;
-
-            self.tile_index = mmu.mem[address as usize];
+            let tile_y = mmu.ly().wrapping_add(mmu.scy()) as usize >> 3;
+            let tile_x = self.fetcher_x.wrapping_add(mmu.scx() / 8) as usize;
+            self.tile_index = self.get_tile_index(tile_x, tile_y, mmu.bg_tile_map_area(), mmu);
         }
     }
 
-    fn fetcher_get_tile_data_low(&mut self, mmu: &MMU) {
+    fn get_tile_adress(&self, mmu: &MMU) -> usize {
         let offset = if mmu.bg_window_tile() {
-            0x8000 + self.tile_index as u16 * 16
+            0x8000 + self.tile_index as usize * 16
         } else {
-            0x9000 + self.tile_index as i8 as u16 * 16
+            0x9000 + self.tile_index as i8 as usize * 16
         };
+        let py = mmu.ly().wrapping_add(mmu.scy()) as usize & 7;
 
-        let address = offset + (self.tile_y as u16 % 8) * 2;
-        self.data_low = mmu.mem[address as usize];
+        return offset + py * 2;
+    }
+
+    fn fetcher_get_tile_data_low(&mut self, mmu: &MMU) {
+        self.data_low = mmu.mem[self.get_tile_adress(mmu)];
     }
 
     fn fetcher_get_tile_data_high(&mut self, mmu: &MMU) {
-        let offset = if mmu.bg_window_tile() {
-            0x8000 + self.tile_index as u16 * 16
-        } else {
-            0x9000 + self.tile_index as i8 as u16 * 16
-        };
-        let address = offset + (self.tile_y as u16 % 8) * 2;
-        self.data_high = mmu.mem[address as usize + 1];
+        self.data_high = mmu.mem[self.get_tile_adress(mmu) + 1];
     }
 
     fn fetcher_push(&mut self, mmu: &MMU) {
@@ -157,13 +146,19 @@ impl BGFifo {
             self.fetcher_state = FetcherState::GetTile;
             self.fetcher_state_ended = false;
 
+            let start_index = if self.fetcher_x == 0 {
+                mmu.scx() % 8
+            } else {
+                0
+            };
+
             if self.in_window {
                 self.window_x += 1;
             } else {
                 self.fetcher_x += 1;
             }
 
-            for i in 0..8 {
+            for i in start_index..8 {
                 if mmu.bg_enabled() {
                     let high = (self.data_high >> i) & 1;
                     let low = (self.data_low >> i) & 1;
